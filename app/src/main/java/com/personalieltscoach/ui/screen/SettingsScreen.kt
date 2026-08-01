@@ -59,12 +59,15 @@ fun SettingsScreen(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Column(Modifier.weight(1f)) {
-                    Text("标准英音（英国英语）", style = MaterialTheme.typography.titleMedium)
+                    Text("GPT Marin · 标准英音", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        when (speech.status) {
-                            SpeechStatus.INITIALIZING -> "正在准备系统语音…"
-                            SpeechStatus.READY -> "已优先使用设备上的离线 en-GB 语音"
-                            SpeechStatus.UNAVAILABLE -> "设备尚未安装英国英语语音包"
+                        when {
+                            settings.apiKey.isBlank() -> "请先在下方填写并保存 OpenAI API Key"
+                            speech.status == SpeechStatus.GENERATING -> "正在生成 Marin 英音…"
+                            speech.status == SpeechStatus.PLAYING -> "正在播放 Marin 英音"
+                            speech.status == SpeechStatus.ERROR ->
+                                speech.lastError ?: "Marin 语音暂时不可用"
+                            else -> "标准英国英语；生成后使用本机私有缓存"
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -73,13 +76,29 @@ fun SettingsScreen(
             }
             FilledTonalButton(
                 onClick = { speech.speak("Welcome to your personal IELTS coach.") },
-                enabled = speech.isReady,
+                enabled = settings.apiKey.isNotBlank() && speech.isReady,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.RecordVoiceOver, contentDescription = null)
+                if (speech.status == SpeechStatus.GENERATING) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.RecordVoiceOver, contentDescription = null)
+                }
                 Spacer(Modifier.width(8.dp))
-                Text("试听标准英音")
+                Text(
+                    when (speech.status) {
+                        SpeechStatus.GENERATING -> "正在生成…"
+                        SpeechStatus.PLAYING -> "正在播放 Marin"
+                        else -> "试听 Marin 标准英音"
+                    }
+                )
             }
+            Text(
+                "Marin 是 OpenAI 生成的 AI 语音。首次朗读会将英文文本发送给 OpenAI，" +
+                    "需要联网并产生少量 API 费用；相同文本之后直接播放本机缓存。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         SectionCard("AI 设置") {

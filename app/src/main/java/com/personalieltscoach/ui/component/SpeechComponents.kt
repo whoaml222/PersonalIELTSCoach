@@ -1,6 +1,8 @@
 package com.personalieltscoach.ui.component
 
-import android.speech.tts.TextToSpeech
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
@@ -24,94 +26,133 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import java.util.Locale
-import java.util.UUID
+import com.personalieltscoach.CoachApplication
+import com.personalieltscoach.ai.OpenAiSpeechService
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
-class SpeechController internal constructor() {
-    private var engine: TextToSpeech? = null
-    private var engineInitialized = false
+class SpeechController internal constructor(
+    private val application: CoachApplication,
+    private val service: OpenAiSpeechService
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var requestJob: Job? = null
+    private var player: MediaPlayer? = null
+    private var requestId = 0L
 
-    var status by mutableStateOf(SpeechStatus.INITIALIZING)
+    var status by mutableStateOf(SpeechStatus.READY)
+        private set
+
+    var lastError by mutableStateOf<String?>(null)
         private set
 
     val isReady: Boolean
-        get() = status == SpeechStatus.READY
-
-    internal fun attach(value: TextToSpeech) {
-        engine = value
-        if (engineInitialized) configure(value)
-    }
-
-    internal fun initialized(status: Int) {
-        engineInitialized = status == TextToSpeech.SUCCESS
-        if (engineInitialized) {
-            engine?.let(::configure)
-        } else {
-            this.status = SpeechStatus.UNAVAILABLE
-        }
-    }
+        get() = status != SpeechStatus.GENERATING
 
     fun speak(text: String) {
-        if (!isReady || text.isBlank()) return
-        engine?.speak(
-            text.trim(),
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            UUID.randomUUID().toString()
-        )
+        if (text.isBlank()) return
+        requestId += 1
+        val currentRequest = requestId
+        requestJob?.cancel()
+        stopPlayer()
+        lastError = null
+        status = SpeechStatus.GENERATING
+        requestJob = scope.launch {
+            try {
+                val audio = service.synthesize(text)
+                if (currentRequest == requestId) play(audio.file.absolutePath, currentRequest)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                if (currentRequest == requestId) showError(error)
+            }
+        }
     }
 
     internal fun release() {
-        engine?.stop()
-        engine?.shutdown()
-        engine = null
-        engineInitialized = false
-        status = SpeechStatus.INITIALIZING
+        requestId += 1
+        requestJob?.cancel()
+        requestJob = null
+        stopPlayer()
+        scope.cancel()
     }
 
-    private fun configure(value: TextToSpeech) {
-        val languageResult = value.setLanguage(Locale.UK)
-        if (
-            languageResult == TextToSpeech.LANG_MISSING_DATA ||
-            languageResult == TextToSpeech.LANG_NOT_SUPPORTED
-        ) {
-            status = SpeechStatus.UNAVAILABLE
-            return
+    private fun play(path: String, currentRequest: Long) {
+        val next = MediaPlayer()
+        player = next
+        next.setAudioAttributes(
+            AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .build()
+        )
+        next.setOnPreparedListener { prepared ->
+            if (currentRequest != requestId) {
+                prepared.release()
+                return@setOnPreparedListener
+            }
+            status = SpeechStatus.PLAYING
+            prepared.start()
         }
+        next.setOnCompletionListener { completed ->
+            completed.release()
+            if (player === completed) player = null
+            if (currentRequest == requestId) status = SpeechStatus.READY
+        }
+        next.setOnErrorListener { failed, _, _ ->
+            failed.release()
+            if (player === failed) player = null
+            if (currentRequest == requestId) {
+                showError(IllegalStateException("Marin 语音播放失败，请重试"))
+            }
+            true
+        }
+        runCatching {
+            next.setDataSource(path)
+            next.prepareAsync()
+        }.onFailure { error ->
+            next.release()
+            if (player === next) player = null
+            if (currentRequest == requestId) showError(error)
+        }
+    }
 
-        val preferredVoice = runCatching { value.voices.orEmpty() }
-            .getOrDefault(emptySet())
-            .asSequence()
-            .filter { it.locale.language == Locale.ENGLISH.language && it.locale.country == Locale.UK.country }
-            .sortedWith(
-                compareByDescending<android.speech.tts.Voice> {
-                    if (it.isNetworkConnectionRequired) 0 else 1
-                }.thenByDescending { it.quality }
-                    .thenBy { it.latency }
-                    .thenBy { it.name }
-            )
-            .firstOrNull()
+    private fun stopPlayer() {
+        player?.let { current ->
+            runCatching { current.stop() }
+            current.release()
+        }
+        player = null
+    }
 
-        preferredVoice?.let(value::setVoice)
-        value.setSpeechRate(0.9f)
-        value.setPitch(1.0f)
-        status = SpeechStatus.READY
+    private fun showError(error: Throwable) {
+        val message = error.message?.takeIf(String::isNotBlank)
+            ?: "Marin 语音暂时不可用，请稍后重试"
+        lastError = message
+        status = SpeechStatus.ERROR
+        Toast.makeText(application, message, Toast.LENGTH_LONG).show()
     }
 }
 
 enum class SpeechStatus {
-    INITIALIZING,
     READY,
-    UNAVAILABLE
+    GENERATING,
+    PLAYING,
+    ERROR
 }
 
 @Composable
 fun rememberSpeechController(): SpeechController {
-    val context = LocalContext.current.applicationContext
-    val controller = remember(context) { SpeechController() }
-    DisposableEffect(context, controller) {
-        val engine = TextToSpeech(context, controller::initialized)
-        controller.attach(engine)
+    val application = LocalContext.current.applicationContext as CoachApplication
+    val controller = remember(application) {
+        SpeechController(application, application.container.speechService)
+    }
+    DisposableEffect(controller) {
         onDispose(controller::release)
     }
     return controller
@@ -148,13 +189,13 @@ fun SpokenEnglishText(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = "朗读整句"
+                    contentDescription = "使用 Marin 朗读整句"
                 )
             }
         }
         if (showHint) {
             Text(
-                "点击句中的英文单词可单独发音",
+                "点击英文单词可单独发音；首次生成 Marin 语音需要联网",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

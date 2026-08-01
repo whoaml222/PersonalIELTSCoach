@@ -320,7 +320,8 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     fun clearAiCache() {
         viewModelScope.launch {
             ai.clearCache()
-            _message.value = "AI 缓存已清除"
+            container.speechService.clearCache()
+            _message.value = "AI 分析和 Marin 语音缓存已清除"
         }
     }
 

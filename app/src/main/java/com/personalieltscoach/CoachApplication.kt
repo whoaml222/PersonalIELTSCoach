@@ -2,6 +2,7 @@ package com.personalieltscoach
 
 import android.app.Application
 import androidx.work.*
+import com.personalieltscoach.ai.OpenAiSpeechService
 import com.personalieltscoach.data.local.database.CoachDatabase
 import com.personalieltscoach.data.repository.AiRepository
 import com.personalieltscoach.data.repository.CoachRepository
@@ -52,6 +53,7 @@ class AppContainer(val application: Application) {
     }
     val database = CoachDatabase.create(application)
     val settingsRepository = SettingsRepository(application)
+    val speechService = OpenAiSpeechService(application, settingsRepository, json)
     val coachRepository = CoachRepository(database, settingsRepository, json)
     val aiRepository = AiRepository(database, settingsRepository, json)
     val updateRepository = UpdateRepository(json)
