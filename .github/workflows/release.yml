@@ -1,4 +1,5 @@
 name: Build and publish Android release
+# A main push publishes the version declared in app/build.gradle.kts when needed.
 
 on:
   push:
@@ -71,3 +72,4 @@ jobs:
           else
             gh release create "$tag" "PersonalIELTSCoach-${tag}.apk" --generate-notes --target "$GITHUB_SHA"
           fi
+
