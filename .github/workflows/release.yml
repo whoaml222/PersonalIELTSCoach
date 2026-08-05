@@ -72,4 +72,3 @@ jobs:
           else
             gh release create "$tag" "PersonalIELTSCoach-${tag}.apk" --generate-notes --target "$GITHUB_SHA"
           fi
-
