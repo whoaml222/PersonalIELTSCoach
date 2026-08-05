@@ -62,7 +62,7 @@ class CoachDatabaseMigrationTest {
         }
 
         val migrated = Room.databaseBuilder(context, CoachDatabase::class.java, databaseName)
-            .addMigrations(CoachDatabase.MIGRATION_1_2)
+            .addMigrations(CoachDatabase.MIGRATION_1_2, CoachDatabase.MIGRATION_2_3)
             .allowMainThreadQueries()
             .build()
         val cursor = migrated.openHelper.readableDatabase.query(
@@ -72,6 +72,14 @@ class CoachDatabaseMigrationTest {
             it.moveToFirst()
             assertEquals("", it.getString(0))
             assertEquals(1, it.getInt(1))
+        }
+
+        val sentenceTable = migrated.openHelper.readableDatabase.query(
+            "SELECT COUNT(*) FROM sentence_cards"
+        )
+        sentenceTable.use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
         }
         migrated.close()
     }

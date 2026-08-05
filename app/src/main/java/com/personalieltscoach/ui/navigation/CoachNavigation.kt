@@ -22,6 +22,7 @@ object Routes {
     const val Review = "review"
     const val WrongWords = "wrong_words"
     const val Sentence = "sentence"
+    const val SentencePack = "sentence_pack"
     const val Reading = "reading"
     const val Writing = "writing"
     const val Progress = "progress"
@@ -160,6 +161,7 @@ private fun CoachNavHost(
         composable(Routes.Review) { ReviewScreen(viewModel) { nav.popBackStack() } }
         composable(Routes.WrongWords) { WrongWordsScreen(viewModel) { nav.popBackStack() } }
         composable(Routes.Sentence) { SentenceStudyScreen(viewModel) { nav.popBackStack() } }
+        composable(Routes.SentencePack) { SentencePackScreen(viewModel) { nav.popBackStack() } }
         composable(Routes.Reading) { ReadingScreen(viewModel) { nav.popBackStack() } }
         composable(Routes.Writing) { WritingPracticeScreen(viewModel) { nav.popBackStack() } }
         composable(Routes.Progress) { ProgressScreen(viewModel) { nav.popBackStack() } }

@@ -20,7 +20,7 @@ import com.personalieltscoach.ui.CoachViewModel
 import com.personalieltscoach.ui.component.*
 import com.personalieltscoach.BuildConfig
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     viewModel: CoachViewModel,
@@ -41,6 +41,7 @@ fun SettingsScreen(
     var showKey by remember { mutableStateOf(false) }
     var modelMenu by remember { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
+    var speechRate by remember(settings.speechRate) { mutableFloatStateOf(settings.speechRate) }
     val models = listOf("gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.4")
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -59,43 +60,58 @@ fun SettingsScreen(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Column(Modifier.weight(1f)) {
-                    Text("GPT Marin · 标准英音", style = MaterialTheme.typography.titleMedium)
+                    Text("免费英国英语 · 在线与离线", style = MaterialTheme.typography.titleMedium)
                     Text(
                         when {
-                            settings.apiKey.isBlank() -> "请先在下方填写并保存 OpenAI API Key"
-                            speech.status == SpeechStatus.GENERATING -> "正在生成 Marin 英音…"
-                            speech.status == SpeechStatus.PLAYING -> "正在播放 Marin 英音"
+                            speech.status == SpeechStatus.INITIALIZING -> "正在加载手机语音服务…"
+                            speech.status == SpeechStatus.PLAYING -> "正在播放英国英语"
                             speech.status == SpeechStatus.ERROR ->
-                                speech.lastError ?: "Marin 语音暂时不可用"
-                            else -> "标准英国英语；生成后使用本机私有缓存"
+                                speech.lastError ?: "英国英语语音暂时不可用"
+                            else -> speech.selectedVoiceLabel
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+            Text("声音模式", style = MaterialTheme.typography.labelLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    "AUTO" to "自动切换",
+                    "ONLINE" to "联网优质",
+                    "OFFLINE" to "完全离线"
+                ).forEach { (mode, label) ->
+                    FilterChip(
+                        selected = settings.speechMode == mode,
+                        onClick = { viewModel.setSpeechMode(mode) },
+                        label = { Text(label) }
+                    )
+                }
+            }
             FilledTonalButton(
                 onClick = { speech.speak("Welcome to your personal IELTS coach.") },
-                enabled = settings.apiKey.isNotBlank() && speech.isReady,
+                enabled = speech.isReady,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (speech.status == SpeechStatus.GENERATING) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.Default.RecordVoiceOver, contentDescription = null)
-                }
+                Icon(Icons.Default.RecordVoiceOver, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    when (speech.status) {
-                        SpeechStatus.GENERATING -> "正在生成…"
-                        SpeechStatus.PLAYING -> "正在播放 Marin"
-                        else -> "试听 Marin 标准英音"
-                    }
-                )
+                Text(if (speech.status == SpeechStatus.PLAYING) "正在播放" else "试听英国英语")
             }
+            Text("语速：${"%.2f".format(speechRate)} 倍")
+            Slider(
+                value = speechRate,
+                onValueChange = { speechRate = it },
+                onValueChangeFinished = { viewModel.setSpeechRate(speechRate) },
+                valueRange = 0.65f..1.15f,
+                steps = 9
+            )
+            OutlinedButton(
+                onClick = speech::installOfflineVoice,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("下载或管理离线英音") }
             Text(
-                "Marin 是 OpenAI 生成的 AI 语音。首次朗读会将英文文本发送给 OpenAI，" +
-                    "需要联网并产生少量 API 费用；相同文本之后直接播放本机缓存。",
+                "朗读由手机语音服务提供，不调用 OpenAI、不需要 API Key，也不产生 Token 费用。" +
+                    "不同手机可用声音可能略有差异。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

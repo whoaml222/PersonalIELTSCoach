@@ -161,3 +161,28 @@ data class SavedSentenceEntity(
     val translation: String,
     val createdAt: Long
 )
+
+@Entity(
+    tableName = "sentence_cards",
+    indices = [
+        Index(value = ["status"]),
+        Index(value = ["nextReviewAt"]),
+        Index(value = ["level"]),
+        Index(value = ["category"])
+    ]
+)
+data class SentenceCardEntity(
+    @PrimaryKey val id: String,
+    val sentence: String,
+    val translation: String,
+    val chunks: String,
+    val note: String,
+    val level: String,
+    val category: String,
+    val status: String = "NEW",
+    val correctStreak: Int = 0,
+    val wrongCount: Int = 0,
+    val nextReviewAt: Long = 0,
+    val lastStudiedAt: Long? = null,
+    val createdAt: Long
+)

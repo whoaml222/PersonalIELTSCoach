@@ -21,6 +21,8 @@ data class CoachSettings(
     val updateRepository: String = BuildConfig.DEFAULT_UPDATE_REPOSITORY,
     val autoCheckUpdates: Boolean = true,
     val lastUpdateCheckAt: Long = 0,
+    val speechMode: String = "AUTO",
+    val speechRate: Float = 0.92f,
     val apiKey: String = ""
 )
 
@@ -55,6 +57,8 @@ class SettingsRepository(private val context: Context) : SettingsProvider {
             updateRepository = prefs[UPDATE_REPOSITORY] ?: BuildConfig.DEFAULT_UPDATE_REPOSITORY,
             autoCheckUpdates = prefs[AUTO_CHECK_UPDATES] ?: true,
             lastUpdateCheckAt = prefs[LAST_UPDATE_CHECK_AT] ?: 0,
+            speechMode = prefs[SPEECH_MODE] ?: "AUTO",
+            speechRate = prefs[SPEECH_RATE] ?: 0.92f,
             apiKey = key
         )
     }.distinctUntilChanged()
@@ -77,6 +81,13 @@ class SettingsRepository(private val context: Context) : SettingsProvider {
         context.dataStore.edit { it[AUTO_CHECK_UPDATES] = value }
     suspend fun setLastUpdateCheckAt(value: Long) =
         context.dataStore.edit { it[LAST_UPDATE_CHECK_AT] = value }
+    suspend fun setSpeechMode(value: String) = context.dataStore.edit {
+        it[SPEECH_MODE] = value.takeIf { mode -> mode in setOf("AUTO", "ONLINE", "OFFLINE") }
+            ?: "AUTO"
+    }
+    suspend fun setSpeechRate(value: Float) = context.dataStore.edit {
+        it[SPEECH_RATE] = value.coerceIn(0.65f, 1.15f)
+    }
 
     suspend fun reset() {
         context.dataStore.edit { it.clear() }
@@ -95,5 +106,7 @@ class SettingsRepository(private val context: Context) : SettingsProvider {
         val UPDATE_REPOSITORY = stringPreferencesKey("update_repository")
         val AUTO_CHECK_UPDATES = booleanPreferencesKey("auto_check_updates")
         val LAST_UPDATE_CHECK_AT = longPreferencesKey("last_update_check_at")
+        val SPEECH_MODE = stringPreferencesKey("speech_mode")
+        val SPEECH_RATE = floatPreferencesKey("speech_rate")
     }
 }

@@ -4,11 +4,16 @@ import androidx.room.withTransaction
 import com.personalieltscoach.data.local.database.CoachDatabase
 import com.personalieltscoach.data.local.entity.*
 import com.personalieltscoach.data.seed.SeedData
+import com.personalieltscoach.data.seed.SentenceTrialData
 import com.personalieltscoach.domain.model.PlacementResult
 import com.personalieltscoach.domain.service.ReviewScheduler
+import com.personalieltscoach.domain.service.SentencePackStats
+import com.personalieltscoach.domain.service.SentenceRating
+import com.personalieltscoach.domain.service.SentenceReviewScheduler
 import com.personalieltscoach.domain.service.StreakCalculator
 import com.personalieltscoach.domain.service.TextSegmenter
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.serialization.json.Json
 import java.security.MessageDigest
 import java.time.Instant
@@ -30,6 +35,13 @@ class CoachRepository(
     val reviewingCount: Flow<Int> = database.wordDao().observeStatusCount("REVIEWING")
     val wrongCount: Flow<Int> = database.wordDao().observeWrongCount()
     val writingCount: Flow<Int> = database.writingDao().observeCount()
+    val sentencePackStats: Flow<SentencePackStats> = combine(
+        database.sentenceCardDao().observeCount(),
+        database.sentenceCardDao().observeStartedCount(),
+        database.sentenceCardDao().observeMasteredCount()
+    ) { total, started, mastered ->
+        SentencePackStats(total = total, started = started, mastered = mastered)
+    }
 
     fun plan(date: String): Flow<DailyPlanEntity?> = database.planDao().observePlan(date)
     fun tasks(date: String): Flow<List<StudyTaskEntity>> = database.planDao().observeTasks(date)
@@ -52,6 +64,9 @@ class CoachRepository(
             if (database.contentDao().readingCount() == 0) {
                 database.contentDao().insertReadings(SeedData.readings(now))
             }
+            // Stable card ids and INSERT IGNORE let later content packs add new cards
+            // without overwriting the learner's existing review progress.
+            database.sentenceCardDao().insertAll(SentenceTrialData.cards(now))
         }
         if (database.userProfileDao().get() != null) ensureTodayPlan()
     }
@@ -121,6 +136,20 @@ class CoachRepository(
         val limit = (task.targetCount - task.completedCount).coerceAtLeast(0)
         if (limit == 0) return emptyList()
         return database.wordDao().getDue(System.currentTimeMillis(), limit)
+    }
+
+    suspend fun sentenceSession(limit: Int): List<SentenceCardEntity> {
+        val safeLimit = limit.coerceIn(1, 30)
+        val due = database.sentenceCardDao().getDue(System.currentTimeMillis(), safeLimit)
+        if (due.size >= safeLimit) return due
+        return due + database.sentenceCardDao().getNew(safeLimit - due.size)
+    }
+
+    suspend fun answerSentence(card: SentenceCardEntity, rating: SentenceRating) {
+        database.sentenceCardDao().upsert(SentenceReviewScheduler.next(card, rating))
+        if (recordUniqueActivity("SENTENCE", 1, "sentence-card:${card.id}")) {
+            incrementTask("SENTENCE_STUDY", 1)
+        }
     }
 
     suspend fun answerWord(word: WordItemEntity, correct: Boolean, isReview: Boolean) {
@@ -264,6 +293,7 @@ class CoachRepository(
             database.writingDao().clear()
             database.studyDao().clear()
             database.contentDao().clearSavedSentences()
+            database.sentenceCardDao().clear()
             database.aiDao().clearSentenceCache()
             database.aiDao().clearResponseCache()
             database.aiDao().clearUsage()

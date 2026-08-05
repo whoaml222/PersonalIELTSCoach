@@ -141,6 +141,7 @@ fun HomeScreen(viewModel: CoachViewModel, navigate: (String) -> Unit) {
 
         Text("专项练习", style = MaterialTheme.typography.titleLarge)
         val buttons = listOf(
+            Triple("碎片句子", Icons.Default.Bolt, Routes.SentencePack),
             Triple("单词复习", Icons.Default.Refresh, Routes.Review),
             Triple("句子精读", Icons.AutoMirrored.Filled.MenuBook, Routes.Sentence),
             Triple("阅读器", Icons.AutoMirrored.Filled.Article, Routes.Reading),

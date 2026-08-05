@@ -10,6 +10,8 @@ import com.personalieltscoach.data.local.entity.*
 import com.personalieltscoach.data.repository.CoachSettings
 import com.personalieltscoach.domain.model.*
 import com.personalieltscoach.domain.service.PlacementEvaluator
+import com.personalieltscoach.domain.service.SentencePackStats
+import com.personalieltscoach.domain.service.SentenceRating
 import com.personalieltscoach.update.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -23,6 +25,16 @@ data class AsyncResult<T>(
     val error: String? = null,
     val fromCache: Boolean = false,
     val requestKey: String? = null
+)
+
+data class SentencePackSessionState(
+    val loading: Boolean = false,
+    val cards: List<SentenceCardEntity> = emptyList(),
+    val initialCount: Int = 0,
+    val minutes: Int = 5,
+    val answering: Boolean = false,
+    val completed: Boolean = false,
+    val error: String? = null
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -58,6 +70,8 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     val learningCount = combine(coach.learningCount, coach.reviewingCount) { a, b -> a + b }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     val wrongCount = coach.wrongCount.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    val sentencePackStats = coach.sentencePackStats
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SentencePackStats())
 
     private val activityTotals = currentDate.flatMapLatest(coach::totals)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -91,6 +105,8 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     val connectionState = _connectionState.asStateFlow()
     private val _updateState = MutableStateFlow(UpdateUiState())
     val updateState = _updateState.asStateFlow()
+    private val _sentencePackSession = MutableStateFlow(SentencePackSessionState())
+    val sentencePackSession = _sentencePackSession.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -173,6 +189,65 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun startSentencePackSession(minutes: Int) {
+        val normalizedMinutes = minutes.coerceIn(3, 20)
+        val limit = when (normalizedMinutes) {
+            in 3..4 -> 3
+            in 5..9 -> 5
+            in 10..19 -> 8
+            else -> 12
+        }
+        viewModelScope.launch {
+            _sentencePackSession.value = SentencePackSessionState(
+                loading = true,
+                minutes = normalizedMinutes
+            )
+            runCatching { coach.sentenceSession(limit) }
+                .onSuccess { cards ->
+                    _sentencePackSession.value = SentencePackSessionState(
+                        cards = cards,
+                        initialCount = cards.size,
+                        minutes = normalizedMinutes,
+                        completed = cards.isEmpty()
+                    )
+                }
+                .onFailure { error ->
+                    _sentencePackSession.value = SentencePackSessionState(
+                        minutes = normalizedMinutes,
+                        error = error.userMessage()
+                    )
+                }
+        }
+    }
+
+    fun rateCurrentSentence(rating: SentenceRating) {
+        val state = _sentencePackSession.value
+        val card = state.cards.firstOrNull() ?: return
+        if (state.answering) return
+        _sentencePackSession.value = state.copy(answering = true, error = null)
+        viewModelScope.launch {
+            runCatching { coach.answerSentence(card, rating) }
+                .onSuccess {
+                    val remaining = _sentencePackSession.value.cards.drop(1)
+                    _sentencePackSession.value = _sentencePackSession.value.copy(
+                        cards = remaining,
+                        answering = false,
+                        completed = remaining.isEmpty()
+                    )
+                }
+                .onFailure { error ->
+                    _sentencePackSession.value = _sentencePackSession.value.copy(
+                        answering = false,
+                        error = error.userMessage()
+                    )
+                }
+        }
+    }
+
+    fun closeSentencePackSession() {
+        _sentencePackSession.value = SentencePackSessionState()
+    }
+
     fun saveSentence(sentence: String) {
         val normalized = sentence.trim()
         val state = sentenceResult.value
@@ -237,6 +312,8 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     fun setNewWords(value: Int) = viewModelScope.launch { settingsRepository.setNewWords(value) }
     fun setReviewWords(value: Int) = viewModelScope.launch { settingsRepository.setReviewWords(value) }
     fun setSentences(value: Int) = viewModelScope.launch { settingsRepository.setSentences(value) }
+    fun setSpeechMode(value: String) = viewModelScope.launch { settingsRepository.setSpeechMode(value) }
+    fun setSpeechRate(value: Float) = viewModelScope.launch { settingsRepository.setSpeechRate(value) }
     fun saveUpdateSettings(repository: String, autoCheck: Boolean) {
         viewModelScope.launch {
             settingsRepository.setUpdateRepository(repository)
@@ -320,8 +397,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     fun clearAiCache() {
         viewModelScope.launch {
             ai.clearCache()
-            container.speechService.clearCache()
-            _message.value = "AI 分析和 Marin 语音缓存已清除"
+            _message.value = "AI 分析缓存已清除"
         }
     }
 
@@ -331,6 +407,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
             _startupHasProfile.value = false
             _sentenceResult.value = AsyncResult()
             _writingResult.value = AsyncResult()
+            _sentencePackSession.value = SentencePackSessionState()
             _message.value = "学习数据已清空"
             onDone()
         }
