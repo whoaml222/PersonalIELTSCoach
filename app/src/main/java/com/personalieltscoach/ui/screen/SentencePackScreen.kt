@@ -72,7 +72,18 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(card.level, fontWeight = FontWeight.Bold)
+                            Column {
+                                Text(card.level, fontWeight = FontWeight.Bold)
+                                Text(
+                                    if (card.status == "NEW") {
+                                        "新句"
+                                    } else {
+                                        "复习 · 已记住 ${card.correctStreak.coerceAtMost(3)} / 3 次"
+                                    },
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                             Text(card.category)
                         }
                         SpokenEnglishText(
@@ -161,6 +172,7 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                     )
                     Text("很好，短时间学习也算数。", style = MaterialTheme.typography.titleLarge)
                     Text("模糊和忘记的句子会按照间隔复习再次出现。")
+                    Text("下一轮仍会加入新句，不会再被复习句完全挡住。")
                     Button(
                         onClick = { viewModel.startSentencePackSession(selectedMinutes) },
                         modifier = Modifier.fillMaxWidth()
@@ -174,7 +186,16 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                         progress = { stats.started.toFloat() / stats.total.coerceAtLeast(1) },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Text("已接触 ${stats.started} / ${stats.total} 句 · 已掌握 ${stats.mastered} 句")
+                    Text(
+                        "已接触 ${stats.started} / ${stats.total} 句 · " +
+                            "巩固中 ${(stats.started - stats.mastered).coerceAtLeast(0)} 句 · " +
+                            "已掌握 ${stats.mastered} 句"
+                    )
+                    Text(
+                        "每句分不同日期连续记住 3 次才计为掌握；每轮会混合新句和到期复习。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 SectionCard("选择这次的空闲时间") {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

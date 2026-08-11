@@ -139,9 +139,10 @@ interface SentenceCardDao {
     @Query(
         "SELECT * FROM sentence_cards " +
             "WHERE status != 'NEW' AND status != 'MASTERED' AND nextReviewAt <= :now " +
+            "AND (lastStudiedAt IS NULL OR lastStudiedAt < :dayStart) " +
             "ORDER BY nextReviewAt, id LIMIT :limit"
     )
-    suspend fun getDue(now: Long, limit: Int): List<SentenceCardEntity>
+    suspend fun getDue(now: Long, dayStart: Long, limit: Int): List<SentenceCardEntity>
 
     @Query("SELECT * FROM sentence_cards WHERE status = 'NEW' ORDER BY id LIMIT :limit")
     suspend fun getNew(limit: Int): List<SentenceCardEntity>
@@ -151,6 +152,12 @@ interface SentenceCardDao {
 
     @Upsert
     suspend fun upsert(item: SentenceCardEntity)
+
+    @Query(
+        "UPDATE sentence_cards SET status = 'MASTERED' " +
+            "WHERE correctStreak >= 3 AND status != 'MASTERED'"
+    )
+    suspend fun promoteEligibleToMastered()
 
     @Query("DELETE FROM sentence_cards")
     suspend fun clear()

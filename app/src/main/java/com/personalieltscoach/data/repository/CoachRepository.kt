@@ -67,6 +67,9 @@ class CoachRepository(
             // Stable card ids and INSERT IGNORE let later content packs add new cards
             // without overwriting the learner's existing review progress.
             database.sentenceCardDao().insertAll(SentenceTrialData.cards(now))
+            // v1.5 shortens the clearly explained mastery goal from four confident
+            // recalls to three, so existing learners receive the corrected status too.
+            database.sentenceCardDao().promoteEligibleToMastered()
         }
         if (database.userProfileDao().get() != null) ensureTodayPlan()
     }
@@ -138,17 +141,53 @@ class CoachRepository(
         return database.wordDao().getDue(System.currentTimeMillis(), limit)
     }
 
-    suspend fun sentenceSession(limit: Int): List<SentenceCardEntity> {
+    suspend fun sentenceSession(
+        limit: Int,
+        now: Long = System.currentTimeMillis()
+    ): List<SentenceCardEntity> {
         val safeLimit = limit.coerceIn(1, 30)
-        val due = database.sentenceCardDao().getDue(System.currentTimeMillis(), safeLimit)
-        if (due.size >= safeLimit) return due
-        return due + database.sentenceCardDao().getNew(safeLimit - due.size)
+        val dayStart = Instant.ofEpochMilli(now)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+
+        // Keep progress moving: reserve most of every session for unseen cards while
+        // still including a small, useful review set. Previously an overdue queue could
+        // completely block new cards and make the learner appear stuck.
+        val reviewTarget = (safeLimit / 3).coerceAtLeast(1)
+        val due = database.sentenceCardDao().getDue(now, dayStart, reviewTarget)
+        val fresh = database.sentenceCardDao().getNew(safeLimit - due.size)
+        if (due.size + fresh.size >= safeLimit) return (fresh + due).distinctBy { it.id }
+
+        val selectedIds = (due + fresh).mapTo(mutableSetOf()) { it.id }
+        val extraDue = database.sentenceCardDao()
+            .getDue(now, dayStart, safeLimit)
+            .filterNot { it.id in selectedIds }
+            .take(safeLimit - due.size - fresh.size)
+        return (fresh + due + extraDue).distinctBy { it.id }
     }
 
     suspend fun answerSentence(card: SentenceCardEntity, rating: SentenceRating) {
-        database.sentenceCardDao().upsert(SentenceReviewScheduler.next(card, rating))
-        if (recordUniqueActivity("SENTENCE", 1, "sentence-card:${card.id}")) {
-            incrementTask("SENTENCE_STUDY", 1)
+        database.withTransaction {
+            database.sentenceCardDao().upsert(SentenceReviewScheduler.next(card, rating))
+            val date = today()
+            val referenceKey = "sentence-card:${card.id}"
+            if (database.studyDao().countByReference(date, "SENTENCE", referenceKey) == 0) {
+                markStudyDay()
+                database.studyDao().insert(
+                    StudyActivityEntity(
+                        date = date,
+                        type = "SENTENCE",
+                        referenceKey = referenceKey,
+                        amount = 1,
+                        durationMinutes = 1,
+                        createdAt = System.currentTimeMillis()
+                    )
+                )
+                incrementTask("SENTENCE_STUDY", 1)
+            }
         }
     }
 

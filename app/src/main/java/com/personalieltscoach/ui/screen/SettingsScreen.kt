@@ -20,7 +20,7 @@ import com.personalieltscoach.ui.CoachViewModel
 import com.personalieltscoach.ui.component.*
 import com.personalieltscoach.BuildConfig
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: CoachViewModel,
@@ -60,31 +60,17 @@ fun SettingsScreen(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Column(Modifier.weight(1f)) {
-                    Text("免费英国英语 · 在线与离线", style = MaterialTheme.typography.titleMedium)
+                    Text("英音词典发音", style = MaterialTheme.typography.titleMedium)
                     Text(
                         when {
-                            speech.status == SpeechStatus.INITIALIZING -> "正在加载手机语音服务…"
-                            speech.status == SpeechStatus.PLAYING -> "正在播放英国英语"
+                            speech.status == SpeechStatus.LOADING -> "正在获取英音词典音频…"
+                            speech.status == SpeechStatus.PLAYING -> "正在播放词典英音"
                             speech.status == SpeechStatus.ERROR ->
-                                speech.lastError ?: "英国英语语音暂时不可用"
+                                speech.lastError ?: "英音词典暂时不可用"
                             else -> speech.selectedVoiceLabel
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Text("声音模式", style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(
-                    "AUTO" to "自动切换",
-                    "ONLINE" to "联网优质",
-                    "OFFLINE" to "完全离线"
-                ).forEach { (mode, label) ->
-                    FilterChip(
-                        selected = settings.speechMode == mode,
-                        onClick = { viewModel.setSpeechMode(mode) },
-                        label = { Text(label) }
                     )
                 }
             }
@@ -93,9 +79,13 @@ fun SettingsScreen(
                 enabled = speech.isReady,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.RecordVoiceOver, contentDescription = null)
+                if (speech.status == SpeechStatus.LOADING) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.RecordVoiceOver, contentDescription = null)
+                }
                 Spacer(Modifier.width(8.dp))
-                Text(if (speech.status == SpeechStatus.PLAYING) "正在播放" else "试听英国英语")
+                Text(if (speech.status == SpeechStatus.PLAYING) "正在播放" else "试听英音词典")
             }
             Text("语速：${"%.2f".format(speechRate)} 倍")
             Slider(
@@ -105,13 +95,9 @@ fun SettingsScreen(
                 valueRange = 0.65f..1.15f,
                 steps = 9
             )
-            OutlinedButton(
-                onClick = speech::installOfflineVoice,
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("下载或管理离线英音") }
             Text(
-                "朗读由手机语音服务提供，不调用 OpenAI、不需要 API Key，也不产生 Token 费用。" +
-                    "不同手机可用声音可能略有差异。",
+                "不再使用手机系统朗读。首次播放需要联网，成功播放后会保存在 APP 缓存中，" +
+                    "以后可离线重听；不调用 OpenAI、不需要 API Key，也不产生 Token 费用。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

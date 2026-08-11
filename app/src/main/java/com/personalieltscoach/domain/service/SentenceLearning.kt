@@ -48,18 +48,18 @@ object SentenceReviewScheduler {
             SentenceRating.REMEMBERED -> when (nextStreak) {
                 1 -> DAY_MS
                 2 -> 3 * DAY_MS
-                3 -> 7 * DAY_MS
+                3 -> 30 * DAY_MS
                 else -> 30 * DAY_MS
             }
         }
         return card.copy(
             status = when {
                 rating == SentenceRating.FORGOT -> "WRONG"
-                nextStreak >= 4 -> "MASTERED"
+                nextStreak >= 3 -> "MASTERED"
                 nextStreak == 1 -> "LEARNING"
                 else -> "REVIEWING"
             },
-            correctStreak = nextStreak.coerceAtMost(4),
+            correctStreak = nextStreak.coerceAtMost(3),
             wrongCount = when (rating) {
                 SentenceRating.FORGOT -> card.wrongCount + 1
                 SentenceRating.FUZZY -> card.wrongCount

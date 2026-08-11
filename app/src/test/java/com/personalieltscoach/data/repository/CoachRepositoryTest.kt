@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -95,5 +96,35 @@ class CoachRepositoryTest {
             database.planDao().getTask(CoachRepository.today(), "WRITING")?.completedCount
         )
         assertEquals(3, repository.todayTotals().first().first { it.type == "WRITING" }.amount)
+    }
+
+    @Test
+    fun sentenceSessionsKeepAddingNewCardsWithoutSameDayRepeats() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(
+            PlacementResult("A0-A1", 300, "词汇", "基础路线")
+        )
+        val seen = mutableSetOf<String>()
+
+        repeat(8) {
+            val cards = repository.sentenceSession(limit = 5)
+            assertEquals(5, cards.size)
+            assertTrue(cards.none { it.id in seen })
+            cards.forEach { card ->
+                seen += card.id
+                repository.answerSentence(
+                    card,
+                    com.personalieltscoach.domain.service.SentenceRating.REMEMBERED
+                )
+            }
+        }
+
+        assertEquals(40, seen.size)
+        assertEquals(40, repository.sentencePackStats.first().started)
+        val next = repository.sentenceSession(limit = 5)
+        assertEquals(
+            listOf("trial-041", "trial-042", "trial-043", "trial-044", "trial-045"),
+            next.map { it.id }
+        )
     }
 }

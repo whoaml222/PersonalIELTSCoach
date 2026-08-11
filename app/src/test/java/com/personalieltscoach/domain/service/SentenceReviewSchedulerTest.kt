@@ -23,14 +23,12 @@ class SentenceReviewSchedulerTest {
         val first = SentenceReviewScheduler.next(card, SentenceRating.REMEMBERED, now)
         val second = SentenceReviewScheduler.next(first, SentenceRating.REMEMBERED, now)
         val third = SentenceReviewScheduler.next(second, SentenceRating.REMEMBERED, now)
-        val fourth = SentenceReviewScheduler.next(third, SentenceRating.REMEMBERED, now)
 
         assertEquals("LEARNING", first.status)
         assertEquals(now + day, first.nextReviewAt)
         assertEquals(now + 3 * day, second.nextReviewAt)
-        assertEquals(now + 7 * day, third.nextReviewAt)
-        assertEquals("MASTERED", fourth.status)
-        assertEquals(now + 30 * day, fourth.nextReviewAt)
+        assertEquals("MASTERED", third.status)
+        assertEquals(now + 30 * day, third.nextReviewAt)
     }
 
     @Test
