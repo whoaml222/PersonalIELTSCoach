@@ -3,6 +3,7 @@ package com.personalieltscoach.data.repository
 import androidx.room.withTransaction
 import com.personalieltscoach.data.local.database.CoachDatabase
 import com.personalieltscoach.data.local.entity.*
+import com.personalieltscoach.data.seed.Nce1WordPack
 import com.personalieltscoach.data.seed.SeedData
 import com.personalieltscoach.data.seed.SentenceTrialData
 import com.personalieltscoach.domain.model.PlacementResult
@@ -55,9 +56,13 @@ class CoachRepository(
     suspend fun initializeIfNeeded() {
         database.withTransaction {
             val now = System.currentTimeMillis()
-            if (database.wordDao().count() == 0) {
-                database.wordDao().insertAll(SeedData.words(now))
-            }
+            val sentenceCards = SentenceTrialData.cards(now)
+            // INSERT IGNORE turns every app upgrade into an incremental content
+            // merge. Existing progress is retained while newly bundled packs are
+            // added to accounts that have already studied the original 100 words.
+            database.wordDao().insertAll(
+                SeedData.words(now) + Nce1WordPack.words(now, sentenceCards)
+            )
             if (database.contentDao().questionCount() == 0) {
                 database.contentDao().insertQuestions(SeedData.questions(json))
             }
@@ -66,7 +71,7 @@ class CoachRepository(
             }
             // Stable card ids and INSERT IGNORE let later content packs add new cards
             // without overwriting the learner's existing review progress.
-            database.sentenceCardDao().insertAll(SentenceTrialData.cards(now))
+            database.sentenceCardDao().insertAll(sentenceCards)
             // v1.5 shortens the clearly explained mastery goal from four confident
             // recalls to three, so existing learners receive the corrected status too.
             database.sentenceCardDao().promoteEligibleToMastered()
@@ -106,8 +111,8 @@ class CoachRepository(
         val writingTarget = if (a1Plus) 5 else 3
         val now = System.currentTimeMillis()
         val tasks = listOf(
-            StudyTaskEntity(date = date, type = "VOCAB_REVIEW", title = "复习旧单词", description = "$reviewTarget 个到期单词", targetCount = reviewTarget),
-            StudyTaskEntity(date = date, type = "VOCAB_NEW", title = "学习新单词", description = "$newTarget 个高频词", targetCount = newTarget),
+            StudyTaskEntity(date = date, type = "VOCAB_REVIEW", title = "复习旧单词", description = "$reviewTarget 个昨天、前天及到期单词", targetCount = reviewTarget),
+            StudyTaskEntity(date = date, type = "VOCAB_NEW", title = "学习新单词", description = "$newTarget 个新概念英语1词汇", targetCount = newTarget),
             StudyTaskEntity(date = date, type = "SENTENCE_STUDY", title = "精读句子", description = "$sentenceTarget 个基础句子", targetCount = sentenceTarget),
             StudyTaskEntity(date = date, type = "READING", title = "阅读短文", description = if (a1Plus) "阅读 100-200 词" else "阅读 50-100 词", targetCount = 1),
             StudyTaskEntity(date = date, type = "WRITING", title = "写作练习", description = "$writingTarget 个简单句", targetCount = writingTarget)
@@ -134,11 +139,11 @@ class CoachRepository(
         return database.wordDao().getNew(limit)
     }
 
-    suspend fun dueWords(): List<WordItemEntity> {
+    suspend fun dueWords(now: Long = System.currentTimeMillis()): List<WordItemEntity> {
         val task = database.planDao().getTask(today(), "VOCAB_REVIEW") ?: return emptyList()
         val limit = (task.targetCount - task.completedCount).coerceAtLeast(0)
         if (limit == 0) return emptyList()
-        return database.wordDao().getDue(System.currentTimeMillis(), limit)
+        return database.wordDao().getDue(now, dayStart(now), limit)
     }
 
     suspend fun sentenceSession(
@@ -194,20 +199,46 @@ class CoachRepository(
     suspend fun answerWord(word: WordItemEntity, correct: Boolean, isReview: Boolean) {
         val now = System.currentTimeMillis()
         val update = ReviewScheduler.next(correct, word.correctStreak, word.wrongCount, now)
-        database.wordDao().upsert(
-            word.copy(
-                status = update.status,
-                correctStreak = update.correctStreak,
-                wrongCount = update.wrongCount,
-                nextReviewAt = update.nextReviewAt,
-                lastWrongAt = if (correct) word.lastWrongAt else now,
-                updatedAt = now
+        database.withTransaction {
+            database.wordDao().upsert(
+                word.copy(
+                    status = update.status,
+                    correctStreak = update.correctStreak,
+                    wrongCount = update.wrongCount,
+                    nextReviewAt = update.nextReviewAt,
+                    lastWrongAt = if (correct) word.lastWrongAt else now,
+                    updatedAt = now
+                )
             )
-        )
-        val activity = if (isReview) "REVIEW_WORD" else "NEW_WORD"
-        val counted = recordUniqueActivity(activity, 1, "word:${word.id}")
-        if (!correct) recordActivity("WRONG_WORD", 1)
-        if (counted) incrementTask(if (isReview) "VOCAB_REVIEW" else "VOCAB_NEW", 1)
+            val date = today()
+            val activity = if (isReview) "REVIEW_WORD" else "NEW_WORD"
+            val referenceKey = "word:${word.id}"
+            if (database.studyDao().countByReference(date, activity, referenceKey) == 0) {
+                markStudyDay()
+                database.studyDao().insert(
+                    StudyActivityEntity(
+                        date = date,
+                        type = activity,
+                        referenceKey = referenceKey,
+                        amount = 1,
+                        durationMinutes = 1,
+                        createdAt = now
+                    )
+                )
+                incrementTask(if (isReview) "VOCAB_REVIEW" else "VOCAB_NEW", 1)
+            }
+            if (!correct) {
+                database.studyDao().insert(
+                    StudyActivityEntity(
+                        date = date,
+                        type = "WRONG_WORD",
+                        amount = 1,
+                        durationMinutes = 1,
+                        createdAt = now
+                    )
+                )
+            }
+        }
     }
 
     suspend fun addUnknownWord(rawWord: String) {
@@ -260,19 +291,6 @@ class CoachRepository(
         ) {
             incrementTask("WRITING", sentenceCount)
         }
-    }
-
-    private suspend fun recordActivity(type: String, amount: Int) {
-        markStudyDay()
-        database.studyDao().insert(
-            StudyActivityEntity(
-                date = today(),
-                type = type,
-                amount = amount,
-                durationMinutes = 1,
-                createdAt = System.currentTimeMillis()
-            )
-        )
     }
 
     private suspend fun recordUniqueActivity(type: String, amount: Int, referenceKey: String): Boolean =
@@ -342,6 +360,13 @@ class CoachRepository(
 
     companion object {
         fun today(): String = LocalDate.now().toString()
+
+        private fun dayStart(time: Long): Long = Instant.ofEpochMilli(time)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
 
         private fun stableKey(value: String): String = MessageDigest.getInstance("SHA-256")
             .digest(value.trim().lowercase().toByteArray())

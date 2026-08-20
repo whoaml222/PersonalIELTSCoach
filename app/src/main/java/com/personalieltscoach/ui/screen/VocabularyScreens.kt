@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.personalieltscoach.data.local.entity.WordItemEntity
+import com.personalieltscoach.data.seed.Nce1WordPack
 import com.personalieltscoach.domain.service.WordPresentation
 import com.personalieltscoach.ui.CoachViewModel
 import com.personalieltscoach.ui.component.CoachScaffold
@@ -46,6 +47,12 @@ fun VocabularyScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
     LaunchedEffect(Unit) { viewModel.loadNewWords() }
 
     CoachScaffold("学习新单词", onBack) {
+        Text(
+            "新概念英语1 · ${Nce1WordPack.SOURCE_ENTRY_COUNT} 条课文词条 · " +
+                "${Nce1WordPack.UNIQUE_WORD_COUNT} 个去重词 · 离线内置",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         WordModeSelector(selected = mode, onSelected = { mode = it })
         if (word == null) {
             SectionCard("今天的新词已完成") {
@@ -126,7 +133,14 @@ private fun WordExerciseCard(
     var result by remember(word.id, mode) { mutableStateOf<Boolean?>(null) }
     var selectedOption by remember(word.id, mode) { mutableStateOf<String?>(null) }
     val options = remember(word.id, allWords.size) {
-        (allWords.filter { it.id != word.id }.shuffled().take(3).map { it.meaning } + word.meaning).shuffled()
+        val distractors = allWords.asSequence()
+            .filter { it.id != word.id && it.meaning != word.meaning }
+            .map { it.meaning }
+            .distinct()
+            .toList()
+            .shuffled()
+            .take(3)
+        (distractors + word.meaning).shuffled()
     }
     fun submit(correct: Boolean) {
         if (result != null) return
@@ -153,6 +167,13 @@ private fun WordExerciseCard(
                     fontWeight = FontWeight.Bold
                 )
                 if (mode == WordMode.EN_TO_ZH) Text(word.phonetic)
+                if (word.level.startsWith("NCE1")) {
+                    Text(
+                        word.level,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             IconButton(onClick = { speech.speak(word.word) }) {
                 Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "发音")
@@ -262,7 +283,7 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
     CoachScaffold("单词复习", onBack) {
         if (word == null) {
             SectionCard("复习已完成") {
-                Text("目前没有到期单词。新学单词会按照 1、3、7 天的节奏回来。")
+                Text("目前没有到期单词。昨天、前天学过但尚未完成的词会自动保留；新词会按照 1、3、7 天的节奏回来。")
             }
         } else {
             SectionCard("先回忆，再看答案") {
@@ -270,6 +291,13 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                     Column {
                         Text(word.word, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                         Text(word.phonetic)
+                        if (word.level.startsWith("NCE1")) {
+                            Text(
+                                word.level,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     IconButton(onClick = {
                         speech.speak(word.word)
@@ -316,6 +344,11 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                     PrimaryButton("显示答案") { showAnswer = true }
                 }
             }
+            Text(
+                "按最早到期顺序复习，昨天、前天未完成的内容不会丢失。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Text("本轮剩余 ${words.size} 个")
         }
     }

@@ -34,8 +34,13 @@ interface WordDao {
     @Query("SELECT * FROM words WHERE status = 'NEW' ORDER BY id LIMIT :limit")
     suspend fun getNew(limit: Int): List<WordItemEntity>
 
-    @Query("SELECT * FROM words WHERE status != 'NEW' AND status != 'MASTERED' AND nextReviewAt <= :now ORDER BY nextReviewAt LIMIT :limit")
-    suspend fun getDue(now: Long, limit: Int): List<WordItemEntity>
+    @Query(
+        "SELECT * FROM words " +
+            "WHERE status != 'NEW' AND status != 'MASTERED' AND nextReviewAt <= :now " +
+            "AND updatedAt < :dayStart " +
+            "ORDER BY nextReviewAt, updatedAt, id LIMIT :limit"
+    )
+    suspend fun getDue(now: Long, dayStart: Long, limit: Int): List<WordItemEntity>
 
     @Query("SELECT * FROM words WHERE LOWER(word) = LOWER(:word) LIMIT 1")
     suspend fun find(word: String): WordItemEntity?
