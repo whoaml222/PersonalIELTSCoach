@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -93,6 +94,41 @@ class CoachRepositoryTest {
         assertEquals("REVIEWING", book?.status)
         assertEquals(2, book?.correctStreak)
         assertEquals("This book is useful.", book?.example)
+    }
+
+    @Test
+    fun appUpgradeReplacesGenericNceExampleWithoutResettingReviewProgress() = runTest {
+        val now = System.currentTimeMillis()
+        database.wordDao().insert(
+            WordItemEntity(
+                word = "Sweden",
+                phonetic = "/ˈswiːd(ə)n/",
+                meaning = "n. 瑞典",
+                example = "Please remember the word \"Sweden\".",
+                exampleTranslation = "请记住单词“Sweden”。",
+                level = "NCE1 Lesson 5&6, NCE1 Lesson 051&52",
+                status = "REVIEWING",
+                correctStreak = 2,
+                wrongCount = 1,
+                nextReviewAt = now + DAY_MS,
+                lastWrongAt = now - DAY_MS,
+                createdAt = now - 10_000,
+                updatedAt = now - 5_000
+            )
+        )
+
+        repository.initializeIfNeeded()
+
+        val sweden = database.wordDao().find("Sweden")
+        assertEquals("REVIEWING", sweden?.status)
+        assertEquals(2, sweden?.correctStreak)
+        assertEquals(1, sweden?.wrongCount)
+        assertEquals(now + DAY_MS, sweden?.nextReviewAt)
+        assertEquals(now - DAY_MS, sweden?.lastWrongAt)
+        assertEquals(now - 5_000, sweden?.updatedAt)
+        assertTrue(sweden?.example?.contains("Sweden") == true)
+        assertTrue(sweden?.exampleTranslation?.contains("瑞典") == true)
+        assertFalse(sweden?.example?.contains("remember the word", ignoreCase = true) == true)
     }
 
     @Test

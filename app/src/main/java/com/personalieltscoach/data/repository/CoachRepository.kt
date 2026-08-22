@@ -57,12 +57,26 @@ class CoachRepository(
         database.withTransaction {
             val now = System.currentTimeMillis()
             val sentenceCards = SentenceTrialData.cards(now)
+            val nceWords = Nce1WordPack.words(now, sentenceCards)
             // INSERT IGNORE turns every app upgrade into an incremental content
             // merge. Existing progress is retained while newly bundled packs are
             // added to accounts that have already studied the original 100 words.
             database.wordDao().insertAll(
-                SeedData.words(now) + Nce1WordPack.words(now, sentenceCards)
+                SeedData.words(now) + nceWords
             )
+            // Content can improve independently from review progress. Update only
+            // the bundled NCE fields, leaving ids, status, streaks, wrong answers,
+            // review dates and timestamps untouched for existing learners.
+            nceWords.forEach { word ->
+                database.wordDao().updateNceLearningContent(
+                    word = word.word,
+                    phonetic = word.phonetic,
+                    meaning = word.meaning,
+                    example = word.example,
+                    exampleTranslation = word.exampleTranslation,
+                    level = word.level
+                )
+            }
             if (database.contentDao().questionCount() == 0) {
                 database.contentDao().insertQuestions(SeedData.questions(json))
             }

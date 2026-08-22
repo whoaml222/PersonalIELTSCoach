@@ -60,6 +60,22 @@ interface WordDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(word: WordItemEntity): Long
 
+    @Query(
+        "UPDATE words SET phonetic = :phonetic, meaning = :meaning, example = :example, " +
+            "exampleTranslation = :exampleTranslation, level = :level " +
+            "WHERE LOWER(word) = LOWER(:word) AND level LIKE 'NCE1 Lesson %' " +
+            "AND (phonetic != :phonetic OR meaning != :meaning OR example != :example " +
+            "OR exampleTranslation != :exampleTranslation OR level != :level)"
+    )
+    suspend fun updateNceLearningContent(
+        word: String,
+        phonetic: String,
+        meaning: String,
+        example: String,
+        exampleTranslation: String,
+        level: String
+    ): Int
+
     @Upsert
     suspend fun upsert(word: WordItemEntity)
 

@@ -18,17 +18,23 @@ object Nce1WordPack {
     ): List<WordItemEntity> = rows.lineSequence()
         .map(String::trim)
         .filter(String::isNotBlank)
-        .map { row ->
+        .mapIndexed { index, row ->
             val parts = row.split('\t')
             require(parts.size == 4) { "Invalid NCE1 word row" }
             val word = parts[0]
             val practiceCard = practiceCards.firstOrNull { containsTerm(it.sentence, word) }
+            val contextualExample = Nce1ExampleFactory.create(
+                word = word,
+                meaning = parts[2],
+                lesson = parts[3],
+                ordinal = index
+            )
             WordItemEntity(
                 word = word,
                 phonetic = parts[1],
                 meaning = parts[2],
-                example = practiceCard?.sentence ?: "Please remember the word \"$word\".",
-                exampleTranslation = practiceCard?.translation ?: "请记住单词“$word”。",
+                example = practiceCard?.sentence ?: contextualExample.sentence,
+                exampleTranslation = practiceCard?.translation ?: contextualExample.translation,
                 level = parts[3],
                 createdAt = now,
                 updatedAt = now
