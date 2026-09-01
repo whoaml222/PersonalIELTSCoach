@@ -9,7 +9,7 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -216,6 +216,26 @@ fun rememberSpeechController(): SpeechController {
 }
 
 @Composable
+fun SpeechButton(
+    text: String,
+    speech: SpeechController,
+    modifier: Modifier = Modifier,
+    contentDescription: String = "使用英音词典朗读"
+) {
+    FilledTonalIconButton(
+        onClick = { speech.speak(text) },
+        enabled = text.isNotBlank() && speech.isReady,
+        modifier = modifier.size(52.dp)
+    ) {
+        Icon(
+            Icons.AutoMirrored.Filled.VolumeUp,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(28.dp)
+        )
+    }
+}
+
+@Composable
 fun SpokenEnglishText(
     text: String,
     speech: SpeechController,
@@ -240,15 +260,7 @@ fun SpokenEnglishText(
                 style = style,
                 wordColor = wordColor
             )
-            IconButton(
-                onClick = { speech.speak(text) },
-                enabled = speech.isReady
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = "使用英音词典朗读"
-                )
-            }
+            SpeechButton(text = text, speech = speech)
         }
         if (showHint) {
             Text(

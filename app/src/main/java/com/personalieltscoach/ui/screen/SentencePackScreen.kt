@@ -2,7 +2,6 @@ package com.personalieltscoach.ui.screen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
@@ -15,11 +14,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.personalieltscoach.domain.service.SentenceChunkCodec
 import com.personalieltscoach.domain.service.SentenceRating
+import com.personalieltscoach.data.seed.Paul1000WordPack
 import com.personalieltscoach.ui.CoachViewModel
 import com.personalieltscoach.ui.component.CoachScaffold
 import com.personalieltscoach.ui.component.ErrorText
 import com.personalieltscoach.ui.component.SectionCard
 import com.personalieltscoach.ui.component.SpokenEnglishText
+import com.personalieltscoach.ui.component.SpeechButton
 import com.personalieltscoach.ui.component.rememberSpeechController
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -108,19 +109,18 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                     SectionCard("自然中文") {
                         Text(card.translation, style = MaterialTheme.typography.titleMedium)
                     }
-                    SectionCard("词组拆分") {
+                    SectionCard("重点词与句意") {
                         SentenceChunkCodec.decode(card.chunks).forEach { chunk ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                IconButton(onClick = { speech.speak(chunk.english) }) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.VolumeUp,
-                                        contentDescription = "朗读 ${chunk.english}"
-                                    )
-                                }
+                                SpeechButton(
+                                    text = chunk.english,
+                                    speech = speech,
+                                    contentDescription = "朗读 ${chunk.english}"
+                                )
                                 Column(Modifier.weight(1f)) {
                                     Text(chunk.english, fontWeight = FontWeight.SemiBold)
                                     Text(
@@ -180,8 +180,8 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                 }
             }
             else -> {
-                SectionCard("澳新工作英语 · 300句试用包") {
-                    Text("从 A1 日常英语开始，逐步进入求职、安全、电工、制冷空调和 IELTS General 表达。")
+                SectionCard("Paul1000 核心口语 · ${Paul1000WordPack.SOURCE_ENTRY_COUNT} 句") {
+                    Text("每个高频词配一条简短日常口语，先理解整句，再记住重点词。")
                     LinearProgressIndicator(
                         progress = { stats.started.toFloat() / stats.total.coerceAtLeast(1) },
                         modifier = Modifier.fillMaxWidth()
@@ -217,7 +217,7 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                     ) { Text("开始学习") }
                 }
                 Text(
-                    "技工句子用于语言学习，不代替当地安全培训、技术规范或持证人员指导。",
+                    "词表和句子均离线内置；首次播放发音需要联网，播放后可离线重听。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

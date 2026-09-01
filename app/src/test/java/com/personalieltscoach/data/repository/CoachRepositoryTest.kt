@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.personalieltscoach.data.local.database.CoachDatabase
+import com.personalieltscoach.data.local.entity.WordSource
 import com.personalieltscoach.data.local.entity.WordItemEntity
 import com.personalieltscoach.data.seed.Nce1WordPack
 import com.personalieltscoach.domain.model.PlacementResult
@@ -53,19 +54,22 @@ class CoachRepositoryTest {
     }
 
     @Test
-    fun newWordSessionStopsAtDailyTarget() = runTest {
+    fun newWordSessionStopsAtTwentyAndCanContinueWithAnotherBatch() = runTest {
         repository.initializeIfNeeded()
         repository.savePlacement(
             PlacementResult("A0-A1", 300, "词汇", "基础路线")
         )
 
-        repeat(10) {
+        assertEquals(20, repository.newWords().size)
+        repeat(20) {
             val word = repository.newWords().first()
             repository.answerWord(word, correct = true, isReview = false)
         }
 
         assertEquals(0, repository.newWords().size)
-        assertEquals(10, database.planDao().getTask(CoachRepository.today(), "VOCAB_NEW")?.completedCount)
+        assertEquals(20, database.planDao().getTask(CoachRepository.today(), "VOCAB_NEW")?.completedCount)
+        assertEquals(20, repository.newWords(continueAfterGoal = true).size)
+        assertTrue(repository.newWords(continueAfterGoal = true).all { it.source == WordSource.NCE1 })
     }
 
     @Test
@@ -93,7 +97,8 @@ class CoachRepositoryTest {
         val book = database.wordDao().find("book")
         assertEquals("REVIEWING", book?.status)
         assertEquals(2, book?.correctStreak)
-        assertEquals("This book is useful.", book?.example)
+        assertEquals(WordSource.NCE1, book?.source)
+        assertFalse(book?.example?.contains("remember the word", ignoreCase = true) == true)
     }
 
     @Test
@@ -167,6 +172,52 @@ class CoachRepositoryTest {
     }
 
     @Test
+    fun dailyReviewBalancesPaulAndNceWordsWhenBothAreDue() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val dayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val now = dayStart + 12 * 60 * 60 * 1000L
+        val candidates = listOf(
+            requireNotNull(database.wordDao().findBySource("book", WordSource.NCE1)),
+            requireNotNull(database.wordDao().findBySource("work", WordSource.NCE1)),
+            requireNotNull(database.wordDao().findBySource("ability", WordSource.PAUL1000)),
+            requireNotNull(database.wordDao().findBySource("about", WordSource.PAUL1000))
+        )
+        candidates.forEach { word ->
+            database.wordDao().upsert(
+                word.copy(status = "LEARNING", nextReviewAt = dayStart, updatedAt = dayStart - DAY_MS)
+            )
+        }
+
+        val due = repository.dueWords(now)
+
+        assertEquals(4, due.size)
+        assertEquals(2, due.count { it.source == WordSource.NCE1 })
+        assertEquals(2, due.count { it.source == WordSource.PAUL1000 })
+        assertEquals(
+            listOf(WordSource.NCE1, WordSource.PAUL1000, WordSource.NCE1, WordSource.PAUL1000),
+            due.map { it.source }
+        )
+    }
+
+    @Test
+    fun studyingPaulSentenceAddsItsFocusWordToVocabularyReview() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val card = repository.sentenceSession(limit = 1).single()
+        val focusWord = requireNotNull(com.personalieltscoach.data.seed.Paul1000SentencePack.focusWord(card.id))
+
+        repository.answerSentence(
+            card,
+            com.personalieltscoach.domain.service.SentenceRating.REMEMBERED
+        )
+
+        val word = requireNotNull(database.wordDao().findBySource(focusWord, WordSource.PAUL1000))
+        assertTrue(word.status != "NEW")
+        assertTrue(word.nextReviewAt > 0)
+    }
+
+    @Test
     fun sameSentenceOnlyCountsOncePerDay() = runTest {
         repository.initializeIfNeeded()
         repository.savePlacement(
@@ -226,7 +277,7 @@ class CoachRepositoryTest {
         assertEquals(40, repository.sentencePackStats.first().started)
         val next = repository.sentenceSession(limit = 5)
         assertEquals(
-            listOf("trial-041", "trial-042", "trial-043", "trial-044", "trial-045"),
+            listOf("paul-0041", "paul-0042", "paul-0043", "paul-0044", "paul-0045"),
             next.map { it.id }
         )
     }

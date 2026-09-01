@@ -93,8 +93,14 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     val questions = _questions.asStateFlow()
     private val _newWords = MutableStateFlow<List<WordItemEntity>>(emptyList())
     val newWords = _newWords.asStateFlow()
+    private val _newWordsLoading = MutableStateFlow(false)
+    val newWordsLoading = _newWordsLoading.asStateFlow()
+    private val _continuingNewWords = MutableStateFlow(false)
+    val continuingNewWords = _continuingNewWords.asStateFlow()
     private val _dueWords = MutableStateFlow<List<WordItemEntity>>(emptyList())
     val dueWords = _dueWords.asStateFlow()
+    private val _dueWordsLoading = MutableStateFlow(false)
+    val dueWordsLoading = _dueWordsLoading.asStateFlow()
     private val _sentenceResult = MutableStateFlow(AsyncResult<SentenceAnalysisResult>())
     val sentenceResult = _sentenceResult.asStateFlow()
     private val _writingResult = MutableStateFlow(AsyncResult<WritingCorrectionResult>())
@@ -137,12 +143,42 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun startNewWordSession() {
+        _continuingNewWords.value = false
+        loadNewWords()
+    }
+
+    fun continueNewWords() {
+        _continuingNewWords.value = true
+        loadNewWords()
+    }
+
     fun loadNewWords() {
-        viewModelScope.launch { _newWords.value = coach.newWords() }
+        viewModelScope.launch {
+            _newWordsLoading.value = true
+            runCatching { coach.newWords(continueAfterGoal = _continuingNewWords.value) }
+                .onSuccess { _newWords.value = it }
+                .onFailure { _message.value = it.userMessage() }
+            _newWordsLoading.value = false
+        }
+    }
+
+    fun advanceNewWord(wordId: Long) {
+        _newWords.value = _newWords.value.filterNot { it.id == wordId }
     }
 
     fun loadDueWords() {
-        viewModelScope.launch { _dueWords.value = coach.dueWords() }
+        viewModelScope.launch {
+            _dueWordsLoading.value = true
+            runCatching { coach.dueWords() }
+                .onSuccess { _dueWords.value = it }
+                .onFailure { _message.value = it.userMessage() }
+            _dueWordsLoading.value = false
+        }
+    }
+
+    fun advanceDueWord(wordId: Long) {
+        _dueWords.value = _dueWords.value.filterNot { it.id == wordId }
     }
 
     fun answerWord(
@@ -408,6 +444,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
             _sentenceResult.value = AsyncResult()
             _writingResult.value = AsyncResult()
             _sentencePackSession.value = SentencePackSessionState()
+            _continuingNewWords.value = false
             _message.value = "学习数据已清空"
             onDone()
         }

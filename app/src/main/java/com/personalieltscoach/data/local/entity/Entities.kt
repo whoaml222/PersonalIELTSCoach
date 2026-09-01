@@ -19,7 +19,11 @@ data class UserProfileEntity(
 
 @Entity(
     tableName = "words",
-    indices = [Index(value = ["word"], unique = true), Index(value = ["nextReviewAt"])]
+    indices = [
+        Index(value = ["word", "source"], unique = true),
+        Index(value = ["nextReviewAt"]),
+        Index(value = ["source"])
+    ]
 )
 data class WordItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -29,6 +33,7 @@ data class WordItemEntity(
     val example: String,
     val exampleTranslation: String,
     val level: String,
+    val source: String = WordSource.CORE,
     val status: String = "NEW",
     val correctStreak: Int = 0,
     val wrongCount: Int = 0,
@@ -37,6 +42,12 @@ data class WordItemEntity(
     val createdAt: Long,
     val updatedAt: Long
 )
+
+object WordSource {
+    const val CORE = "CORE"
+    const val NCE1 = "NCE1"
+    const val PAUL1000 = "PAUL1000"
+}
 
 @Entity(tableName = "daily_plans", indices = [Index(value = ["date"], unique = true)])
 data class DailyPlanEntity(

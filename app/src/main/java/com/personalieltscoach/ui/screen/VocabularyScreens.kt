@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.personalieltscoach.data.local.entity.WordItemEntity
+import com.personalieltscoach.data.local.entity.WordSource
 import com.personalieltscoach.data.seed.Nce1WordPack
 import com.personalieltscoach.domain.service.WordPresentation
 import com.personalieltscoach.ui.CoachViewModel
@@ -27,6 +26,7 @@ import com.personalieltscoach.ui.component.CoachScaffold
 import com.personalieltscoach.ui.component.PrimaryButton
 import com.personalieltscoach.ui.component.SectionCard
 import com.personalieltscoach.ui.component.SpeechController
+import com.personalieltscoach.ui.component.SpeechButton
 import com.personalieltscoach.ui.component.SpokenEnglishText
 import com.personalieltscoach.ui.component.rememberSpeechController
 
@@ -40,11 +40,13 @@ private enum class WordMode(val label: String) {
 fun VocabularyScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
     val words by viewModel.newWords.collectAsStateWithLifecycle()
     val allWords by viewModel.allWords.collectAsStateWithLifecycle()
+    val loading by viewModel.newWordsLoading.collectAsStateWithLifecycle()
+    val continuing by viewModel.continuingNewWords.collectAsStateWithLifecycle()
     var mode by remember { mutableStateOf(WordMode.EN_TO_ZH) }
     val word = words.firstOrNull()
     val speech = rememberSpeechController()
 
-    LaunchedEffect(Unit) { viewModel.loadNewWords() }
+    LaunchedEffect(Unit) { viewModel.startNewWordSession() }
 
     CoachScaffold("学习新单词", onBack) {
         Text(
@@ -54,9 +56,30 @@ fun VocabularyScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         WordModeSelector(selected = mode, onSelected = { mode = it })
-        if (word == null) {
-            SectionCard("今天的新词已完成") {
-                Text("做得漂亮。现在可以去复习旧词，或用新词写几个句子。")
+        if (loading && word == null) {
+            Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (word == null) {
+            val hasMoreNceWords = allWords.any {
+                it.source == WordSource.NCE1 && it.status == "NEW"
+            }
+            SectionCard(if (hasMoreNceWords) "今天的 20 个新词已完成" else "新概念英语1词汇已学完") {
+                Text(
+                    if (hasMoreNceWords) {
+                        "今天的计划已经完成。继续学习不会增加今日目标，也可以明天再来。"
+                    } else {
+                        "所有新概念英语1词汇都已接触，接下来按计划复习即可。"
+                    }
+                )
+                if (hasMoreNceWords) {
+                    Button(
+                        onClick = viewModel::continueNewWords,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                    ) {
+                        Text("继续学习 20 个")
+                    }
+                }
             }
         } else {
             WordExerciseCard(
@@ -72,9 +95,12 @@ fun VocabularyScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                         reloadSession = false
                     )
                 },
-                onNext = viewModel::loadNewWords
+                onNext = { viewModel.advanceNewWord(word.id) }
             )
-            Text("剩余 ${words.size} 个", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                if (continuing) "正在加学 · 本批剩余 ${words.size} 个" else "今日计划剩余 ${words.size} 个",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -175,9 +201,7 @@ private fun WordExerciseCard(
                     )
                 }
             }
-            IconButton(onClick = { speech.speak(word.word) }) {
-                Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "发音")
-            }
+            SpeechButton(text = word.word, speech = speech, contentDescription = "朗读 ${word.word}")
         }
         when (mode) {
             WordMode.EN_TO_ZH -> options.forEach { option ->
@@ -273,6 +297,7 @@ private fun WordExerciseCard(
 @Composable
 fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
     val words by viewModel.dueWords.collectAsStateWithLifecycle()
+    val loading by viewModel.dueWordsLoading.collectAsStateWithLifecycle()
     val word = words.firstOrNull()
     var showAnswer by remember(word?.id) { mutableStateOf(false) }
     var result by remember(word?.id) { mutableStateOf<Boolean?>(null) }
@@ -281,7 +306,11 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
     LaunchedEffect(Unit) { viewModel.loadDueWords() }
 
     CoachScaffold("单词复习", onBack) {
-        if (word == null) {
+        if (loading && word == null) {
+            Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (word == null) {
             SectionCard("复习已完成") {
                 Text("目前没有到期单词。昨天、前天学过但尚未完成的词会自动保留；新词会按照 1、3、7 天的节奏回来。")
             }
@@ -298,10 +327,21 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        if (word.source == WordSource.NCE1) {
+                            Text(
+                                "来自新概念英语1",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else if (word.source == WordSource.PAUL1000) {
+                            Text(
+                                "来自碎片句子",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
-                    IconButton(onClick = {
-                        speech.speak(word.word)
-                    }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, "发音") }
+                    SpeechButton(text = word.word, speech = speech, contentDescription = "朗读 ${word.word}")
                 }
                 SpokenEnglishText(
                     text = word.example,
@@ -338,14 +378,14 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                             color = if (result == true) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.error
                         )
-                        PrimaryButton("下一个单词", onClick = viewModel::loadDueWords)
+                        PrimaryButton("下一个单词") { viewModel.advanceDueWord(word.id) }
                     }
                 } else {
                     PrimaryButton("显示答案") { showAnswer = true }
                 }
             }
             Text(
-                "按最早到期顺序复习，昨天、前天未完成的内容不会丢失。",
+                "按最早到期顺序复习；有两类内容时，碎片句子词汇与新概念英语1词汇各占一半。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

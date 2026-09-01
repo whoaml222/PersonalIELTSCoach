@@ -4,8 +4,8 @@ import androidx.room.withTransaction
 import com.personalieltscoach.data.local.database.CoachDatabase
 import com.personalieltscoach.data.local.entity.*
 import com.personalieltscoach.data.seed.Nce1WordPack
+import com.personalieltscoach.data.seed.Paul1000SentencePack
 import com.personalieltscoach.data.seed.SeedData
-import com.personalieltscoach.data.seed.SentenceTrialData
 import com.personalieltscoach.domain.model.PlacementResult
 import com.personalieltscoach.domain.service.ReviewScheduler
 import com.personalieltscoach.domain.service.SentencePackStats
@@ -56,19 +56,33 @@ class CoachRepository(
     suspend fun initializeIfNeeded() {
         database.withTransaction {
             val now = System.currentTimeMillis()
-            val sentenceCards = SentenceTrialData.cards(now)
-            val nceWords = Nce1WordPack.words(now, sentenceCards)
+            val nceWords = Nce1WordPack.words(now, emptyList())
+            val sentenceCards = Paul1000SentencePack.cards(now, nceWords)
+            val paulWords = Paul1000SentencePack.words(now, nceWords)
             // INSERT IGNORE turns every app upgrade into an incremental content
             // merge. Existing progress is retained while newly bundled packs are
             // added to accounts that have already studied the original 100 words.
             database.wordDao().insertAll(
-                SeedData.words(now) + nceWords
+                SeedData.words(now) + nceWords + paulWords
             )
+            // If a learner already knew the same word in the original core pack,
+            // do not show it again as a brand-new NCE word after upgrading.
+            database.wordDao().inheritLegacyProgressForNce()
             // Content can improve independently from review progress. Update only
             // the bundled NCE fields, leaving ids, status, streaks, wrong answers,
             // review dates and timestamps untouched for existing learners.
             nceWords.forEach { word ->
                 database.wordDao().updateNceLearningContent(
+                    word = word.word,
+                    phonetic = word.phonetic,
+                    meaning = word.meaning,
+                    example = word.example,
+                    exampleTranslation = word.exampleTranslation,
+                    level = word.level
+                )
+            }
+            paulWords.forEach { word ->
+                database.wordDao().updatePaulLearningContent(
                     word = word.word,
                     phonetic = word.phonetic,
                     meaning = word.meaning,
@@ -83,9 +97,21 @@ class CoachRepository(
             if (database.contentDao().readingCount() == 0) {
                 database.contentDao().insertReadings(SeedData.readings(now))
             }
-            // Stable card ids and INSERT IGNORE let later content packs add new cards
-            // without overwriting the learner's existing review progress.
+            // The Paul1000 pack replaces the old 300-card trial. Old progress cannot
+            // be mapped safely to different sentences, so only that retired pack is removed.
+            database.sentenceCardDao().deleteLegacyTrialPack()
             database.sentenceCardDao().insertAll(sentenceCards)
+            sentenceCards.forEach { card ->
+                database.sentenceCardDao().updatePaulContent(
+                    id = card.id,
+                    sentence = card.sentence,
+                    translation = card.translation,
+                    chunks = card.chunks,
+                    note = card.note,
+                    level = card.level,
+                    category = card.category
+                )
+            }
             // v1.5 shortens the clearly explained mastery goal from four confident
             // recalls to three, so existing learners receive the corrected status too.
             database.sentenceCardDao().promoteEligibleToMastered()
@@ -116,17 +142,32 @@ class CoachRepository(
         val date = today()
         val profile = database.userProfileDao().get() ?: return
         val existingPlan = database.planDao().getPlan(date)
-        if (!force && existingPlan != null) return
+        if (!force && existingPlan != null) {
+            val newWordTask = database.planDao().getTask(date, "VOCAB_NEW")
+            if (newWordTask != null && newWordTask.targetCount != NEW_WORD_DAILY_GOAL) {
+                database.withTransaction {
+                    database.planDao().upsertTask(
+                        newWordTask.copy(
+                            description = "$NEW_WORD_DAILY_GOAL 个新概念英语1词汇，完成后可继续",
+                            targetCount = NEW_WORD_DAILY_GOAL,
+                            completed = newWordTask.completedCount >= NEW_WORD_DAILY_GOAL
+                        )
+                    )
+                    val completedTasks = database.planDao().getTasks(date).count { it.completed }
+                    database.planDao().upsertPlan(existingPlan.copy(completedCount = completedTasks))
+                }
+            }
+            return
+        }
         val settings = settingsRepository.current()
         val a1Plus = profile.currentLevel != "A0-A1"
         val reviewTarget = if (a1Plus) maxOf(settings.dailyReviewWords, 30) else settings.dailyReviewWords
-        val newTarget = if (a1Plus) maxOf(settings.dailyNewWords, 15) else settings.dailyNewWords
         val sentenceTarget = if (a1Plus) maxOf(settings.dailySentences, 8) else settings.dailySentences
         val writingTarget = if (a1Plus) 5 else 3
         val now = System.currentTimeMillis()
         val tasks = listOf(
-            StudyTaskEntity(date = date, type = "VOCAB_REVIEW", title = "复习旧单词", description = "$reviewTarget 个昨天、前天及到期单词", targetCount = reviewTarget),
-            StudyTaskEntity(date = date, type = "VOCAB_NEW", title = "学习新单词", description = "$newTarget 个新概念英语1词汇", targetCount = newTarget),
+            StudyTaskEntity(date = date, type = "VOCAB_REVIEW", title = "复习旧单词", description = "$reviewTarget 个到期词：碎片句子与新概念各半", targetCount = reviewTarget),
+            StudyTaskEntity(date = date, type = "VOCAB_NEW", title = "学习新单词", description = "$NEW_WORD_DAILY_GOAL 个新概念英语1词汇，完成后可继续", targetCount = NEW_WORD_DAILY_GOAL),
             StudyTaskEntity(date = date, type = "SENTENCE_STUDY", title = "精读句子", description = "$sentenceTarget 个基础句子", targetCount = sentenceTarget),
             StudyTaskEntity(date = date, type = "READING", title = "阅读短文", description = if (a1Plus) "阅读 100-200 词" else "阅读 50-100 词", targetCount = 1),
             StudyTaskEntity(date = date, type = "WRITING", title = "写作练习", description = "$writingTarget 个简单句", targetCount = writingTarget)
@@ -146,18 +187,48 @@ class CoachRepository(
         }
     }
 
-    suspend fun newWords(): List<WordItemEntity> {
+    suspend fun newWords(continueAfterGoal: Boolean = false): List<WordItemEntity> {
         val task = database.planDao().getTask(today(), "VOCAB_NEW") ?: return emptyList()
-        val limit = (task.targetCount - task.completedCount).coerceAtLeast(0)
+        val remainingGoal = (task.targetCount - task.completedCount).coerceAtLeast(0)
+        val limit = if (remainingGoal > 0) remainingGoal else if (continueAfterGoal) EXTRA_WORD_BATCH else 0
         if (limit == 0) return emptyList()
-        return database.wordDao().getNew(limit)
+        return database.wordDao().getNewBySource(WordSource.NCE1, limit)
     }
 
     suspend fun dueWords(now: Long = System.currentTimeMillis()): List<WordItemEntity> {
         val task = database.planDao().getTask(today(), "VOCAB_REVIEW") ?: return emptyList()
         val limit = (task.targetCount - task.completedCount).coerceAtLeast(0)
         if (limit == 0) return emptyList()
-        return database.wordDao().getDue(now, dayStart(now), limit)
+        val start = dayStart(now)
+        val nceTarget = (limit + 1) / 2
+        val paulTarget = limit / 2
+        val nce = database.wordDao().getDueBySource(WordSource.NCE1, now, start, nceTarget)
+        val paul = database.wordDao().getDueBySource(WordSource.PAUL1000, now, start, paulTarget)
+
+        val selected = interleave(nce, paul).toMutableList()
+        var remaining = limit - selected.size
+        if (remaining > 0) {
+            val selectedIds = selected.mapTo(mutableSetOf()) { it.id }
+            val extraNce = database.wordDao()
+                .getDueBySource(WordSource.NCE1, now, start, limit)
+                .filterNot { it.id in selectedIds }
+            val extraPaul = database.wordDao()
+                .getDueBySource(WordSource.PAUL1000, now, start, limit)
+                .filterNot { it.id in selectedIds }
+            (extraNce + extraPaul).take(remaining).forEach {
+                selected += it
+                selectedIds += it.id
+            }
+            remaining = limit - selected.size
+            if (remaining > 0) {
+                database.wordDao()
+                    .getDueBySource(WordSource.CORE, now, start, remaining)
+                    .filterNot { it.id in selectedIds }
+                    .take(remaining)
+                    .forEach(selected::add)
+            }
+        }
+        return selected
     }
 
     suspend fun sentenceSession(
@@ -191,6 +262,30 @@ class CoachRepository(
     suspend fun answerSentence(card: SentenceCardEntity, rating: SentenceRating) {
         database.withTransaction {
             database.sentenceCardDao().upsert(SentenceReviewScheduler.next(card, rating))
+            Paul1000SentencePack.focusWord(card.id)?.let { focusWord ->
+                database.wordDao().findBySource(focusWord, WordSource.PAUL1000)?.let { word ->
+                    val wordUpdate = ReviewScheduler.next(
+                        correct = rating != SentenceRating.FORGOT,
+                        currentStreak = word.correctStreak,
+                        wrongCount = word.wrongCount,
+                        now = System.currentTimeMillis()
+                    )
+                    database.wordDao().upsert(
+                        word.copy(
+                            status = wordUpdate.status,
+                            correctStreak = wordUpdate.correctStreak,
+                            wrongCount = wordUpdate.wrongCount,
+                            nextReviewAt = wordUpdate.nextReviewAt,
+                            lastWrongAt = if (rating == SentenceRating.FORGOT) {
+                                System.currentTimeMillis()
+                            } else {
+                                word.lastWrongAt
+                            },
+                            updatedAt = System.currentTimeMillis()
+                        )
+                    )
+                }
+            }
             val date = today()
             val referenceKey = "sentence-card:${card.id}"
             if (database.studyDao().countByReference(date, "SENTENCE", referenceKey) == 0) {
@@ -373,6 +468,9 @@ class CoachRepository(
     }
 
     companion object {
+        const val NEW_WORD_DAILY_GOAL = 20
+        private const val EXTRA_WORD_BATCH = 20
+
         fun today(): String = LocalDate.now().toString()
 
         private fun dayStart(time: Long): Long = Instant.ofEpochMilli(time)
@@ -385,5 +483,15 @@ class CoachRepository(
         private fun stableKey(value: String): String = MessageDigest.getInstance("SHA-256")
             .digest(value.trim().lowercase().toByteArray())
             .joinToString("") { "%02x".format(it) }
+
+        private fun interleave(
+            first: List<WordItemEntity>,
+            second: List<WordItemEntity>
+        ): List<WordItemEntity> = buildList {
+            repeat(maxOf(first.size, second.size)) { index ->
+                first.getOrNull(index)?.let(::add)
+                second.getOrNull(index)?.let(::add)
+            }
+        }
     }
 }

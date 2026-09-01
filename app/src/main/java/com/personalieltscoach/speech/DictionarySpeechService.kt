@@ -124,7 +124,7 @@ class DictionarySpeechService(
     private companion object {
         const val ENDPOINT = "https://dict.youdao.com/dictvoice"
         const val CACHE_DIRECTORY = "uk_dictionary_speech"
-        const val USER_AGENT = "PersonalIELTSCoach/1.5"
+        const val USER_AGENT = "PersonalIELTSCoach/1.6.2"
         const val MIN_AUDIO_BYTES = 512L
         const val MAX_CACHE_BYTES = 64L * 1024L * 1024L
         const val TARGET_CACHE_BYTES = 48L * 1024L * 1024L

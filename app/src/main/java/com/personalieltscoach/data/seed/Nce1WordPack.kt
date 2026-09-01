@@ -2,6 +2,7 @@ package com.personalieltscoach.data.seed
 
 import com.personalieltscoach.data.local.entity.WordItemEntity
 import com.personalieltscoach.data.local.entity.SentenceCardEntity
+import com.personalieltscoach.data.local.entity.WordSource
 
 /**
  * Offline vocabulary pack generated from https://www.ncego.com/books/words/nce1.
@@ -14,7 +15,7 @@ object Nce1WordPack {
 
     fun words(
         now: Long,
-        practiceCards: List<SentenceCardEntity> = SentenceTrialData.cards(now)
+        practiceCards: List<SentenceCardEntity> = emptyList()
     ): List<WordItemEntity> = rows.lineSequence()
         .map(String::trim)
         .filter(String::isNotBlank)
@@ -36,6 +37,7 @@ object Nce1WordPack {
                 example = practiceCard?.sentence ?: contextualExample.sentence,
                 exampleTranslation = practiceCard?.translation ?: contextualExample.translation,
                 level = parts[3],
+                source = WordSource.NCE1,
                 createdAt = now,
                 updatedAt = now
             )

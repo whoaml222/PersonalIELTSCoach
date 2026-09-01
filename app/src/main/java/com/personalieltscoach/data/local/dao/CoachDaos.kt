@@ -31,8 +31,8 @@ interface WordDao {
     @Query("SELECT * FROM words WHERE wrongCount > 0 ORDER BY wrongCount DESC, lastWrongAt DESC")
     fun observeWrong(): Flow<List<WordItemEntity>>
 
-    @Query("SELECT * FROM words WHERE status = 'NEW' ORDER BY id LIMIT :limit")
-    suspend fun getNew(limit: Int): List<WordItemEntity>
+    @Query("SELECT * FROM words WHERE status = 'NEW' AND source = :source ORDER BY id LIMIT :limit")
+    suspend fun getNewBySource(source: String, limit: Int): List<WordItemEntity>
 
     @Query(
         "SELECT * FROM words " +
@@ -42,8 +42,27 @@ interface WordDao {
     )
     suspend fun getDue(now: Long, dayStart: Long, limit: Int): List<WordItemEntity>
 
-    @Query("SELECT * FROM words WHERE LOWER(word) = LOWER(:word) LIMIT 1")
+    @Query(
+        "SELECT * FROM words " +
+            "WHERE source = :source AND status != 'NEW' AND status != 'MASTERED' " +
+            "AND nextReviewAt <= :now AND updatedAt < :dayStart " +
+            "ORDER BY nextReviewAt, updatedAt, id LIMIT :limit"
+    )
+    suspend fun getDueBySource(
+        source: String,
+        now: Long,
+        dayStart: Long,
+        limit: Int
+    ): List<WordItemEntity>
+
+    @Query(
+        "SELECT * FROM words WHERE LOWER(word) = LOWER(:word) " +
+            "ORDER BY CASE source WHEN 'NCE1' THEN 0 WHEN 'PAUL1000' THEN 1 ELSE 2 END LIMIT 1"
+    )
     suspend fun find(word: String): WordItemEntity?
+
+    @Query("SELECT * FROM words WHERE LOWER(word) = LOWER(:word) AND source = :source LIMIT 1")
+    suspend fun findBySource(word: String, source: String): WordItemEntity?
 
     @Query("SELECT COUNT(*) FROM words")
     suspend fun count(): Int
@@ -63,7 +82,7 @@ interface WordDao {
     @Query(
         "UPDATE words SET phonetic = :phonetic, meaning = :meaning, example = :example, " +
             "exampleTranslation = :exampleTranslation, level = :level " +
-            "WHERE LOWER(word) = LOWER(:word) AND level LIKE 'NCE1 Lesson %' " +
+            "WHERE LOWER(word) = LOWER(:word) AND source = 'NCE1' " +
             "AND (phonetic != :phonetic OR meaning != :meaning OR example != :example " +
             "OR exampleTranslation != :exampleTranslation OR level != :level)"
     )
@@ -75,6 +94,43 @@ interface WordDao {
         exampleTranslation: String,
         level: String
     ): Int
+
+    @Query(
+        "UPDATE words SET phonetic = :phonetic, meaning = :meaning, example = :example, " +
+            "exampleTranslation = :exampleTranslation, level = :level " +
+            "WHERE LOWER(word) = LOWER(:word) AND source = 'PAUL1000' " +
+            "AND (phonetic != :phonetic OR meaning != :meaning OR example != :example " +
+            "OR exampleTranslation != :exampleTranslation OR level != :level)"
+    )
+    suspend fun updatePaulLearningContent(
+        word: String,
+        phonetic: String,
+        meaning: String,
+        example: String,
+        exampleTranslation: String,
+        level: String
+    ): Int
+
+    @Query(
+        "UPDATE words SET " +
+            "status = (SELECT legacy.status FROM words legacy " +
+                "WHERE LOWER(legacy.word) = LOWER(words.word) AND legacy.source = 'CORE' LIMIT 1), " +
+            "correctStreak = (SELECT legacy.correctStreak FROM words legacy " +
+                "WHERE LOWER(legacy.word) = LOWER(words.word) AND legacy.source = 'CORE' LIMIT 1), " +
+            "wrongCount = (SELECT legacy.wrongCount FROM words legacy " +
+                "WHERE LOWER(legacy.word) = LOWER(words.word) AND legacy.source = 'CORE' LIMIT 1), " +
+            "nextReviewAt = (SELECT legacy.nextReviewAt FROM words legacy " +
+                "WHERE LOWER(legacy.word) = LOWER(words.word) AND legacy.source = 'CORE' LIMIT 1), " +
+            "lastWrongAt = (SELECT legacy.lastWrongAt FROM words legacy " +
+                "WHERE LOWER(legacy.word) = LOWER(words.word) AND legacy.source = 'CORE' LIMIT 1), " +
+            "updatedAt = (SELECT legacy.updatedAt FROM words legacy " +
+                "WHERE LOWER(legacy.word) = LOWER(words.word) AND legacy.source = 'CORE' LIMIT 1) " +
+            "WHERE source = 'NCE1' AND status = 'NEW' AND EXISTS (" +
+                "SELECT 1 FROM words legacy WHERE LOWER(legacy.word) = LOWER(words.word) " +
+                "AND legacy.source = 'CORE' AND legacy.status != 'NEW'" +
+            ")"
+    )
+    suspend fun inheritLegacyProgressForNce(): Int
 
     @Upsert
     suspend fun upsert(word: WordItemEntity)
@@ -170,6 +226,24 @@ interface SentenceCardDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(items: List<SentenceCardEntity>)
+
+    @Query("DELETE FROM sentence_cards WHERE id LIKE 'trial-%'")
+    suspend fun deleteLegacyTrialPack(): Int
+
+    @Query(
+        "UPDATE sentence_cards SET sentence = :sentence, translation = :translation, " +
+            "chunks = :chunks, note = :note, level = :level, category = :category " +
+            "WHERE id = :id AND id LIKE 'paul-%'"
+    )
+    suspend fun updatePaulContent(
+        id: String,
+        sentence: String,
+        translation: String,
+        chunks: String,
+        note: String,
+        level: String,
+        category: String
+    ): Int
 
     @Upsert
     suspend fun upsert(item: SentenceCardEntity)

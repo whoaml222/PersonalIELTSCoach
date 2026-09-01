@@ -25,7 +25,7 @@ import com.personalieltscoach.data.local.entity.*
         SavedSentenceEntity::class,
         SentenceCardEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class CoachDatabase : RoomDatabase() {
@@ -45,7 +45,7 @@ abstract class CoachDatabase : RoomDatabase() {
                 CoachDatabase::class.java,
                 "personal_ielts_coach.db"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .fallbackToDestructiveMigration()
                 .build()
 
@@ -83,6 +83,25 @@ abstract class CoachDatabase : RoomDatabase() {
                 )
                 database.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_sentence_cards_category ON sentence_cards(category)"
+                )
+            }
+        }
+
+        internal val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("DROP INDEX IF EXISTS index_words_word")
+                database.execSQL(
+                    "ALTER TABLE words ADD COLUMN source TEXT NOT NULL DEFAULT 'CORE'"
+                )
+                database.execSQL(
+                    "UPDATE words SET source = 'NCE1' WHERE level LIKE 'NCE1 Lesson %'"
+                )
+                database.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_words_word_source " +
+                        "ON words(word, source)"
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_words_source ON words(source)"
                 )
             }
         }
