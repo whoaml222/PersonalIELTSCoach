@@ -73,6 +73,31 @@ class CoachRepositoryTest {
     }
 
     @Test
+    fun existingDailyPlanMigratesSentenceTaskToThirtyPaulWords() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val date = CoachRepository.today()
+        val oldTask = requireNotNull(database.planDao().getTask(date, "SENTENCE_STUDY"))
+        database.planDao().upsertTask(
+            oldTask.copy(
+                title = "精读句子",
+                description = "5 个基础句子",
+                targetCount = 5,
+                completedCount = 3,
+                completed = false
+            )
+        )
+
+        repository.ensureTodayPlan()
+
+        val migrated = requireNotNull(database.planDao().getTask(date, "SENTENCE_STUDY"))
+        assertEquals("Paul1000单词", migrated.title)
+        assertEquals(30, migrated.targetCount)
+        assertEquals(3, migrated.completedCount)
+        assertFalse(migrated.completed)
+    }
+
+    @Test
     fun appUpgradeAddsNcePackWithoutResettingExistingWordProgress() = runTest {
         val now = System.currentTimeMillis()
         database.wordDao().insert(
@@ -204,7 +229,7 @@ class CoachRepositoryTest {
     fun studyingPaulSentenceAddsItsFocusWordToVocabularyReview() = runTest {
         repository.initializeIfNeeded()
         repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
-        val card = repository.sentenceSession(limit = 1).single()
+        val card = repository.paulWordSession().first()
         val focusWord = requireNotNull(com.personalieltscoach.data.seed.Paul1000SentencePack.focusWord(card.id))
 
         repository.answerSentence(
@@ -218,7 +243,7 @@ class CoachRepositoryTest {
     }
 
     @Test
-    fun sameSentenceOnlyCountsOncePerDay() = runTest {
+    fun sentenceAnalysisDoesNotConsumeThePaulWordGoal() = runTest {
         repository.initializeIfNeeded()
         repository.savePlacement(
             PlacementResult("A0-A1", 300, "词汇", "基础路线")
@@ -228,7 +253,7 @@ class CoachRepositoryTest {
         repository.recordSentenceStudy("  i LIKE reading.  ")
 
         assertEquals(
-            1,
+            0,
             database.planDao().getTask(CoachRepository.today(), "SENTENCE_STUDY")?.completedCount
         )
         assertEquals(1, repository.todayTotals().first().first { it.type == "SENTENCE" }.amount)
@@ -253,31 +278,37 @@ class CoachRepositoryTest {
     }
 
     @Test
-    fun sentenceSessionsKeepAddingNewCardsWithoutSameDayRepeats() = runTest {
+    fun paulWordSessionStopsAtThirtyAndCanContinueWithAnotherBatch() = runTest {
         repository.initializeIfNeeded()
         repository.savePlacement(
             PlacementResult("A0-A1", 300, "词汇", "基础路线")
         )
-        val seen = mutableSetOf<String>()
+        val cards = repository.paulWordSession()
 
-        repeat(8) {
-            val cards = repository.sentenceSession(limit = 5)
-            assertEquals(5, cards.size)
-            assertTrue(cards.none { it.id in seen })
-            cards.forEach { card ->
-                seen += card.id
-                repository.answerSentence(
-                    card,
-                    com.personalieltscoach.domain.service.SentenceRating.REMEMBERED
-                )
-            }
+        assertEquals(30, cards.size)
+        assertEquals(
+            (1..30).map { "paul-${it.toString().padStart(4, '0')}" },
+            cards.map { it.id }
+        )
+        val wordsByCard = repository.paulWordsFor(cards)
+        assertEquals(30, wordsByCard.size)
+        assertTrue(wordsByCard.values.all { it.source == WordSource.PAUL1000 })
+
+        cards.forEach { card ->
+            repository.answerSentence(
+                card,
+                com.personalieltscoach.domain.service.SentenceRating.REMEMBERED
+            )
         }
 
-        assertEquals(40, seen.size)
-        assertEquals(40, repository.sentencePackStats.first().started)
-        val next = repository.sentenceSession(limit = 5)
+        assertTrue(repository.paulWordSession().isEmpty())
         assertEquals(
-            listOf("paul-0041", "paul-0042", "paul-0043", "paul-0044", "paul-0045"),
+            30,
+            database.planDao().getTask(CoachRepository.today(), "SENTENCE_STUDY")?.completedCount
+        )
+        val next = repository.paulWordSession(continueAfterGoal = true)
+        assertEquals(
+            (31..60).map { "paul-${it.toString().padStart(4, '0')}" },
             next.map { it.id }
         )
     }

@@ -144,15 +144,22 @@ class CoachRepository(
         val existingPlan = database.planDao().getPlan(date)
         if (!force && existingPlan != null) {
             val newWordTask = database.planDao().getTask(date, "VOCAB_NEW")
-            if (newWordTask != null && newWordTask.targetCount != NEW_WORD_DAILY_GOAL) {
+            val paulWordTask = database.planDao().getTask(date, "SENTENCE_STUDY")
+            val updatedNewWordTask = newWordTask?.copy(
+                description = "$NEW_WORD_DAILY_GOAL 个新概念英语1词汇，完成后可继续",
+                targetCount = NEW_WORD_DAILY_GOAL,
+                completed = newWordTask.completedCount >= NEW_WORD_DAILY_GOAL
+            )
+            val updatedPaulWordTask = paulWordTask?.copy(
+                title = "Paul1000单词",
+                description = "$PAUL_WORD_DAILY_GOAL 个高频词和真实口语例句，完成后可继续",
+                targetCount = PAUL_WORD_DAILY_GOAL,
+                completed = paulWordTask.completedCount >= PAUL_WORD_DAILY_GOAL
+            )
+            if (updatedNewWordTask != newWordTask || updatedPaulWordTask != paulWordTask) {
                 database.withTransaction {
-                    database.planDao().upsertTask(
-                        newWordTask.copy(
-                            description = "$NEW_WORD_DAILY_GOAL 个新概念英语1词汇，完成后可继续",
-                            targetCount = NEW_WORD_DAILY_GOAL,
-                            completed = newWordTask.completedCount >= NEW_WORD_DAILY_GOAL
-                        )
-                    )
+                    updatedNewWordTask?.let { database.planDao().upsertTask(it) }
+                    updatedPaulWordTask?.let { database.planDao().upsertTask(it) }
                     val completedTasks = database.planDao().getTasks(date).count { it.completed }
                     database.planDao().upsertPlan(existingPlan.copy(completedCount = completedTasks))
                 }
@@ -162,13 +169,12 @@ class CoachRepository(
         val settings = settingsRepository.current()
         val a1Plus = profile.currentLevel != "A0-A1"
         val reviewTarget = if (a1Plus) maxOf(settings.dailyReviewWords, 30) else settings.dailyReviewWords
-        val sentenceTarget = if (a1Plus) maxOf(settings.dailySentences, 8) else settings.dailySentences
         val writingTarget = if (a1Plus) 5 else 3
         val now = System.currentTimeMillis()
         val tasks = listOf(
-            StudyTaskEntity(date = date, type = "VOCAB_REVIEW", title = "复习旧单词", description = "$reviewTarget 个到期词：碎片句子与新概念各半", targetCount = reviewTarget),
+            StudyTaskEntity(date = date, type = "VOCAB_REVIEW", title = "复习旧单词", description = "$reviewTarget 个到期词：Paul1000与新概念各半", targetCount = reviewTarget),
             StudyTaskEntity(date = date, type = "VOCAB_NEW", title = "学习新单词", description = "$NEW_WORD_DAILY_GOAL 个新概念英语1词汇，完成后可继续", targetCount = NEW_WORD_DAILY_GOAL),
-            StudyTaskEntity(date = date, type = "SENTENCE_STUDY", title = "精读句子", description = "$sentenceTarget 个基础句子", targetCount = sentenceTarget),
+            StudyTaskEntity(date = date, type = "SENTENCE_STUDY", title = "Paul1000单词", description = "$PAUL_WORD_DAILY_GOAL 个高频词和真实口语例句，完成后可继续", targetCount = PAUL_WORD_DAILY_GOAL),
             StudyTaskEntity(date = date, type = "READING", title = "阅读短文", description = if (a1Plus) "阅读 100-200 词" else "阅读 50-100 词", targetCount = 1),
             StudyTaskEntity(date = date, type = "WRITING", title = "写作练习", description = "$writingTarget 个简单句", targetCount = writingTarget)
         )
@@ -231,33 +237,25 @@ class CoachRepository(
         return selected
     }
 
-    suspend fun sentenceSession(
-        limit: Int,
-        now: Long = System.currentTimeMillis()
-    ): List<SentenceCardEntity> {
-        val safeLimit = limit.coerceIn(1, 30)
-        val dayStart = Instant.ofEpochMilli(now)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
-            .atStartOfDay(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
-
-        // Keep progress moving: reserve most of every session for unseen cards while
-        // still including a small, useful review set. Previously an overdue queue could
-        // completely block new cards and make the learner appear stuck.
-        val reviewTarget = (safeLimit / 3).coerceAtLeast(1)
-        val due = database.sentenceCardDao().getDue(now, dayStart, reviewTarget)
-        val fresh = database.sentenceCardDao().getNew(safeLimit - due.size)
-        if (due.size + fresh.size >= safeLimit) return (fresh + due).distinctBy { it.id }
-
-        val selectedIds = (due + fresh).mapTo(mutableSetOf()) { it.id }
-        val extraDue = database.sentenceCardDao()
-            .getDue(now, dayStart, safeLimit)
-            .filterNot { it.id in selectedIds }
-            .take(safeLimit - due.size - fresh.size)
-        return (fresh + due + extraDue).distinctBy { it.id }
+    suspend fun paulWordSession(continueAfterGoal: Boolean = false): List<SentenceCardEntity> {
+        val task = database.planDao().getTask(today(), "SENTENCE_STUDY") ?: return emptyList()
+        val remainingGoal = (task.targetCount - task.completedCount).coerceAtLeast(0)
+        val limit = when {
+            remainingGoal > 0 -> remainingGoal
+            continueAfterGoal -> PAUL_EXTRA_BATCH
+            else -> 0
+        }
+        if (limit == 0) return emptyList()
+        return database.sentenceCardDao().getNew(limit)
     }
+
+    suspend fun paulWordsFor(cards: List<SentenceCardEntity>): Map<String, WordItemEntity> =
+        cards.mapNotNull { card ->
+            val focusWord = Paul1000SentencePack.focusWord(card.id) ?: return@mapNotNull null
+            database.wordDao().findBySource(focusWord, WordSource.PAUL1000)?.let { word ->
+                card.id to word
+            }
+        }.toMap()
 
     suspend fun answerSentence(card: SentenceCardEntity, rating: SentenceRating) {
         database.withTransaction {
@@ -378,9 +376,7 @@ class CoachRepository(
     }
 
     suspend fun recordSentenceStudy(sentence: String) {
-        if (recordUniqueActivity("SENTENCE", 1, stableKey(sentence))) {
-            incrementTask("SENTENCE_STUDY", 1)
-        }
+        recordUniqueActivity("SENTENCE", 1, stableKey(sentence))
     }
 
     suspend fun recordReading(text: String) {
@@ -469,7 +465,9 @@ class CoachRepository(
 
     companion object {
         const val NEW_WORD_DAILY_GOAL = 20
+        const val PAUL_WORD_DAILY_GOAL = 30
         private const val EXTRA_WORD_BATCH = 20
+        private const val PAUL_EXTRA_BATCH = 30
 
         fun today(): String = LocalDate.now().toString()
 

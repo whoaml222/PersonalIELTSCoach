@@ -170,8 +170,8 @@ fun SettingsScreen(
 
         SectionCard("学习设置") {
             NumberSetting("每日复习词数量", settings.dailyReviewWords, viewModel::setReviewWords)
-            NumberSetting("每日精读句子数量", settings.dailySentences, viewModel::setSentences)
             Text("每日先学习 20 个新概念英语1词汇，完成后可自行继续。")
+            Text("Paul1000 每日先学习 30 个高频词，完成后可自行继续。")
             Text("当前目标：IELTS 7.0")
             Text(
                 "数量修改会从下一次生成每日计划开始生效。",

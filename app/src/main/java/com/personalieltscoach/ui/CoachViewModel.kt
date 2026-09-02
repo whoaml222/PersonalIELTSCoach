@@ -30,8 +30,9 @@ data class AsyncResult<T>(
 data class SentencePackSessionState(
     val loading: Boolean = false,
     val cards: List<SentenceCardEntity> = emptyList(),
+    val wordsByCardId: Map<String, WordItemEntity> = emptyMap(),
     val initialCount: Int = 0,
-    val minutes: Int = 5,
+    val continuing: Boolean = false,
     val answering: Boolean = false,
     val completed: Boolean = false,
     val error: String? = null
@@ -225,38 +226,35 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun startSentencePackSession(minutes: Int) {
-        val normalizedMinutes = minutes.coerceIn(3, 20)
-        val limit = when (normalizedMinutes) {
-            in 3..4 -> 3
-            in 5..9 -> 5
-            in 10..19 -> 8
-            else -> 12
-        }
+    fun startPaulWordSession(continueAfterGoal: Boolean = false) {
         viewModelScope.launch {
             _sentencePackSession.value = SentencePackSessionState(
                 loading = true,
-                minutes = normalizedMinutes
+                continuing = continueAfterGoal
             )
-            runCatching { coach.sentenceSession(limit) }
-                .onSuccess { cards ->
+            runCatching {
+                val cards = coach.paulWordSession(continueAfterGoal)
+                cards to coach.paulWordsFor(cards)
+            }
+                .onSuccess { (cards, wordsByCardId) ->
                     _sentencePackSession.value = SentencePackSessionState(
                         cards = cards,
+                        wordsByCardId = wordsByCardId,
                         initialCount = cards.size,
-                        minutes = normalizedMinutes,
+                        continuing = continueAfterGoal,
                         completed = cards.isEmpty()
                     )
                 }
                 .onFailure { error ->
                     _sentencePackSession.value = SentencePackSessionState(
-                        minutes = normalizedMinutes,
+                        continuing = continueAfterGoal,
                         error = error.userMessage()
                     )
                 }
         }
     }
 
-    fun rateCurrentSentence(rating: SentenceRating) {
+    fun rateCurrentPaulWord(rating: SentenceRating) {
         val state = _sentencePackSession.value
         val card = state.cards.firstOrNull() ?: return
         if (state.answering) return

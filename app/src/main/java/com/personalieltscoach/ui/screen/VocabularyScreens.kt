@@ -335,7 +335,7 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                             )
                         } else if (word.source == WordSource.PAUL1000) {
                             Text(
-                                "来自碎片句子",
+                                "来自Paul1000单词",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -385,7 +385,7 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                 }
             }
             Text(
-                "按最早到期顺序复习；有两类内容时，碎片句子词汇与新概念英语1词汇各占一半。",
+                "按最早到期顺序复习；有两类内容时，Paul1000词汇与新概念英语1词汇各占一半。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

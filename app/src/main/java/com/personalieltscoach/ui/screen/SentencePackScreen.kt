@@ -3,7 +3,6 @@ package com.personalieltscoach.ui.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -12,9 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.personalieltscoach.domain.service.SentenceChunkCodec
-import com.personalieltscoach.domain.service.SentenceRating
+import com.personalieltscoach.data.repository.CoachRepository
 import com.personalieltscoach.data.seed.Paul1000WordPack
+import com.personalieltscoach.domain.service.SentenceRating
+import com.personalieltscoach.domain.service.WordPresentation
 import com.personalieltscoach.ui.CoachViewModel
 import com.personalieltscoach.ui.component.CoachScaffold
 import com.personalieltscoach.ui.component.ErrorText
@@ -23,21 +23,26 @@ import com.personalieltscoach.ui.component.SpokenEnglishText
 import com.personalieltscoach.ui.component.SpeechButton
 import com.personalieltscoach.ui.component.rememberSpeechController
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
     val stats by viewModel.sentencePackStats.collectAsStateWithLifecycle()
+    val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val session by viewModel.sentencePackSession.collectAsStateWithLifecycle()
     val speech = rememberSpeechController()
-    var selectedMinutes by rememberSaveable { mutableIntStateOf(5) }
+    val task = tasks.firstOrNull { it.type == "SENTENCE_STUDY" }
+    val dailyTarget = task?.targetCount ?: CoachRepository.PAUL_WORD_DAILY_GOAL
+    val dailyCompleted = task?.completedCount ?: 0
+    val dailyRemaining = (dailyTarget - dailyCompleted).coerceAtLeast(0)
+    val hasMoreWords = stats.started < stats.total
     val card = session.cards.firstOrNull()
+    val word = card?.id?.let(session.wordsByCardId::get)
     var revealed by rememberSaveable(card?.id) { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         onDispose(viewModel::closeSentencePackSession)
     }
 
-    CoachScaffold("碎片句子", onBack) {
+    CoachScaffold("Paul1000单词", onBack) {
         when {
             session.loading -> {
                 Box(
@@ -47,17 +52,18 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                     CircularProgressIndicator()
                 }
             }
-            card != null -> {
+            card != null && word != null -> {
                 val completed = session.initialCount - session.cards.size
                 LinearProgressIndicator(
                     progress = { completed.toFloat() / session.initialCount.coerceAtLeast(1) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    "本轮 ${completed + 1} / ${session.initialCount} · 约 ${session.minutes} 分钟",
+                    "本批 ${completed + 1} / ${session.initialCount}",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
+
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.extraLarge,
@@ -71,26 +77,41 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
                         ) {
-                            Column {
-                                Text(card.level, fontWeight = FontWeight.Bold)
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
                                 Text(
-                                    if (card.status == "NEW") {
-                                        "新句"
-                                    } else {
-                                        "复习 · 已记住 ${card.correctStreak.coerceAtMost(3)} / 3 次"
-                                    },
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
+                                    word.word,
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(word.phonetic, style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    WordPresentation.meaningWithChineseType(word.meaning),
+                                    style = MaterialTheme.typography.titleLarge
                                 )
                             }
-                            Text(card.category)
+                            SpeechButton(
+                                text = word.word,
+                                speech = speech,
+                                contentDescription = "朗读 ${word.word}"
+                            )
                         }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Text(
+                            "真实口语用法",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                         SpokenEnglishText(
                             text = card.sentence,
                             speech = speech,
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.titleLarge,
                             showHint = true
                         )
                     }
@@ -98,44 +119,26 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
 
                 if (!revealed) {
                     Text(
-                        "先猜整句意思，再查看拆分。不要急着逐字翻译。",
+                        "先根据单词理解例句，再查看中文。",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Button(
                         onClick = { revealed = true },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp)
-                    ) { Text("显示中文和词组拆分") }
+                    ) { Text("显示例句中文") }
                 } else {
-                    SectionCard("自然中文") {
+                    SectionCard("例句中文") {
                         Text(card.translation, style = MaterialTheme.typography.titleMedium)
-                    }
-                    SectionCard("重点词与句意") {
-                        SentenceChunkCodec.decode(card.chunks).forEach { chunk ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                SpeechButton(
-                                    text = chunk.english,
-                                    speech = speech,
-                                    contentDescription = "朗读 ${chunk.english}"
-                                )
-                                Column(Modifier.weight(1f)) {
-                                    Text(chunk.english, fontWeight = FontWeight.SemiBold)
-                                    Text(
-                                        chunk.chinese,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+                        if (card.note.isNotBlank()) {
+                            Text(
+                                card.note,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                    SectionCard("本句要点") {
-                        Text(card.note)
-                    }
                     Text(
-                        "这句话你记得怎么样？",
+                        "这个单词和用法记得怎么样？",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -144,17 +147,17 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { viewModel.rateCurrentSentence(SentenceRating.FORGOT) },
+                            onClick = { viewModel.rateCurrentPaulWord(SentenceRating.FORGOT) },
                             enabled = !session.answering,
                             modifier = Modifier.weight(1f)
                         ) { Text("忘记了") }
                         FilledTonalButton(
-                            onClick = { viewModel.rateCurrentSentence(SentenceRating.FUZZY) },
+                            onClick = { viewModel.rateCurrentPaulWord(SentenceRating.FUZZY) },
                             enabled = !session.answering,
                             modifier = Modifier.weight(1f)
                         ) { Text("有点模糊") }
                         Button(
-                            onClick = { viewModel.rateCurrentSentence(SentenceRating.REMEMBERED) },
+                            onClick = { viewModel.rateCurrentPaulWord(SentenceRating.REMEMBERED) },
                             enabled = !session.answering,
                             modifier = Modifier.weight(1f)
                         ) { Text("记住了") }
@@ -162,62 +165,92 @@ fun SentencePackScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                 }
                 ErrorText(session.error)
             }
+            card != null -> {
+                SectionCard("内容加载失败") {
+                    Text("这个单词没有正确关联到学习卡片，请返回后重试。")
+                }
+                ErrorText(session.error)
+            }
             session.completed -> {
-                SectionCard("本轮完成") {
+                SectionCard(if (hasMoreWords) "本批学习完成" else "Paul1000 已全部学完") {
                     Icon(
                         Icons.Default.CheckCircle,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(42.dp)
                     )
-                    Text("很好，短时间学习也算数。", style = MaterialTheme.typography.titleLarge)
-                    Text("模糊和忘记的句子会按照间隔复习再次出现。")
-                    Text("下一轮仍会加入新句，不会再被复习句完全挡住。")
-                    Button(
-                        onClick = { viewModel.startSentencePackSession(selectedMinutes) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("再来一轮") }
+                    Text(
+                        if (hasMoreWords) "今天的学习很扎实。" else "你已接触全部 Paul1000 单词。",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        if (hasMoreWords) {
+                            "你可以先休息，也可以继续学习下一批 30 个；加学不会改变今日目标。"
+                        } else {
+                            "接下来按“单词复习”中的间隔计划继续巩固即可。"
+                        }
+                    )
+                    if (hasMoreWords) {
+                        Button(
+                            onClick = { viewModel.startPaulWordSession(continueAfterGoal = true) },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                        ) { Text("继续学习 30 个") }
+                    }
                 }
             }
             else -> {
-                SectionCard("Paul1000 核心口语 · ${Paul1000WordPack.SOURCE_ENTRY_COUNT} 句") {
-                    Text("每个高频词配一条简短日常口语，先理解整句，再记住重点词。")
+                SectionCard("Paul1000 高频词 · ${Paul1000WordPack.SOURCE_ENTRY_COUNT} 个") {
+                    Text("单词、英音音标和中文释义单独展示，下面用一条简短真实口语说明用法。")
                     LinearProgressIndicator(
                         progress = { stats.started.toFloat() / stats.total.coerceAtLeast(1) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
-                        "已接触 ${stats.started} / ${stats.total} 句 · " +
-                            "巩固中 ${(stats.started - stats.mastered).coerceAtLeast(0)} 句 · " +
-                            "已掌握 ${stats.mastered} 句"
+                        "已学习 ${stats.started} / ${stats.total} 个 · " +
+                            "巩固中 ${(stats.started - stats.mastered).coerceAtLeast(0)} 个 · " +
+                            "已掌握 ${stats.mastered} 个"
+                    )
+                }
+
+                SectionCard("今日学习") {
+                    Text(
+                        "今日已完成 $dailyCompleted / $dailyTarget 个",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    LinearProgressIndicator(
+                        progress = {
+                            dailyCompleted.coerceAtMost(dailyTarget).toFloat() /
+                                dailyTarget.coerceAtLeast(1)
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Text(
-                        "每句分不同日期连续记住 3 次才计为掌握；每轮会混合新句和到期复习。",
-                        style = MaterialTheme.typography.bodySmall,
+                        if (dailyRemaining > 0) {
+                            "每天先学习 30 个新词；完成后由你决定是否继续。"
+                        } else {
+                            "今天的 30 个已经完成。继续学习不会增加今日目标。"
+                        },
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-                SectionCard("选择这次的空闲时间") {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(3, 5, 10, 20).forEach { minutes ->
-                            FilterChip(
-                                selected = selectedMinutes == minutes,
-                                onClick = { selectedMinutes = minutes },
-                                label = { Text("$minutes 分钟") },
-                                leadingIcon = if (selectedMinutes == minutes) {
-                                    { Icon(Icons.Default.Schedule, contentDescription = null) }
-                                } else null
-                            )
-                        }
-                    }
                     Button(
-                        onClick = { viewModel.startSentencePackSession(selectedMinutes) },
-                        enabled = stats.total > 0,
+                        onClick = {
+                            viewModel.startPaulWordSession(continueAfterGoal = dailyRemaining == 0)
+                        },
+                        enabled = hasMoreWords,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp)
-                    ) { Text("开始学习") }
+                    ) {
+                        Text(
+                            when {
+                                !hasMoreWords -> "Paul1000 已全部学完"
+                                dailyRemaining > 0 -> "学习今日剩余 $dailyRemaining 个"
+                                else -> "继续学习 30 个"
+                            }
+                        )
+                    }
                 }
                 Text(
-                    "词表和句子均离线内置；首次播放发音需要联网，播放后可离线重听。",
+                    "词表和例句均离线内置；首次播放发音需要联网，播放后可离线重听。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

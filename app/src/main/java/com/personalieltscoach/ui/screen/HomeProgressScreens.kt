@@ -141,7 +141,7 @@ fun HomeScreen(viewModel: CoachViewModel, navigate: (String) -> Unit) {
 
         Text("专项练习", style = MaterialTheme.typography.titleLarge)
         val buttons = listOf(
-            Triple("碎片句子", Icons.Default.Bolt, Routes.SentencePack),
+            Triple("Paul1000单词", Icons.Default.Bolt, Routes.SentencePack),
             Triple("单词复习", Icons.Default.Refresh, Routes.Review),
             Triple("句子精读", Icons.AutoMirrored.Filled.MenuBook, Routes.Sentence),
             Triple("阅读器", Icons.AutoMirrored.Filled.Article, Routes.Reading),
@@ -225,7 +225,7 @@ fun ProgressScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
             StatRow("新学单词", "${stats.newWords} 个")
             StatRow("复习单词", "${stats.reviewedWords} 个")
             StatRow("错词", "${stats.wrongWords} 个")
-            StatRow("精读句子", "${stats.sentences} 句")
+            StatRow("口语例句", "${stats.sentences} 条")
             StatRow("阅读字数", "${stats.readingWords}")
             StatRow("写作句子", "${stats.writingSentences} 个")
         }
