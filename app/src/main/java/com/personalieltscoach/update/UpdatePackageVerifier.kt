@@ -29,7 +29,9 @@ class UpdatePackageVerifier(private val context: Context) {
         }
         val current = packageInfo(context.packageName, installed = true)
             ?: return UpdateVerificationResult.Invalid("无法读取当前应用签名")
-        if (signerDigests(archive) != signerDigests(current)) {
+        val downloadedSigners = signerDigests(archive)
+        val installedSigners = signerDigests(current)
+        if (!matchingSigners(downloadedSigners, installedSigners)) {
             return UpdateVerificationResult.Invalid("更新签名与当前应用不一致，已拒绝安装")
         }
         return UpdateVerificationResult.Valid
@@ -59,8 +61,8 @@ class UpdatePackageVerifier(private val context: Context) {
     private fun signerDigests(info: PackageInfo): Set<String> {
         val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val signingInfo = info.signingInfo ?: return emptySet()
-            if (signingInfo.hasMultipleSigners()) signingInfo.apkContentsSigners.toList()
-            else signingInfo.signingCertificateHistory.toList()
+            if (signingInfo.hasMultipleSigners()) signingInfo.apkContentsSigners?.toList().orEmpty()
+            else signingInfo.signingCertificateHistory?.toList().orEmpty()
         } else {
             info.signatures?.toList().orEmpty()
         }
@@ -74,5 +76,9 @@ class UpdatePackageVerifier(private val context: Context) {
     @Suppress("DEPRECATION")
     private fun PackageInfo.longVersionCodeCompat(): Long =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) longVersionCode else versionCode.toLong()
-}
 
+    internal companion object {
+        fun matchingSigners(downloaded: Set<String>, installed: Set<String>): Boolean =
+            downloaded.isNotEmpty() && installed.isNotEmpty() && downloaded == installed
+    }
+}

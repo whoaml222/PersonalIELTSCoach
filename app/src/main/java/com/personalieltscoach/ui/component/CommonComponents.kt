@@ -54,8 +54,8 @@ fun CoachScaffold(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .widthIn(max = 720.dp)
+                    .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 18.dp, vertical = 12.dp)
                     .padding(bottom = 18.dp),

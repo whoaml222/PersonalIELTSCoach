@@ -16,6 +16,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withContext
+import okhttp3.mockwebserver.SocketPolicy
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -68,6 +75,15 @@ class DictionarySpeechServiceTest {
         assertEquals("check the pressure", server.takeRequest().requestUrl?.queryParameter("audio"))
         assertEquals("check", server.takeRequest().requestUrl?.queryParameter("audio"))
         assertEquals("the pressure", server.takeRequest().requestUrl?.queryParameter("audio"))
+    }
+
+    @Test fun `cancelling stops a pending network request without fallback downloads`() = runTest {
+        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
+        val job = launch(Dispatchers.Default) { service().prepare("check the pressure") }
+        assertTrue(server.takeRequest(5, TimeUnit.SECONDS) != null)
+        // The socket callback runs on real threads; do not let runTest jump virtual time.
+        withContext(Dispatchers.Default) { withTimeout(3000) { job.cancelAndJoin() } }
+        assertEquals(1, server.requestCount)
     }
 
     private fun service(): DictionarySpeechService {

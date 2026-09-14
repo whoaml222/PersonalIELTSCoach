@@ -141,10 +141,10 @@ object SeedData {
         eat|/iːt/|v. 吃|We eat breakfast together.|我们一起吃早餐。
         drink|/drɪŋk/|v. 喝|I drink water every morning.|我每天早晨喝水。
         read|/riːd/|v. 阅读|I read a book every night.|我每天晚上读一本书。
-        write|/raɪt/|v. 写|She writes an English sentence.|她写了一个英文句子。
+        write|/raɪt/|v. 写|Could you write that down for me?|你能帮我把那个写下来吗？
         work|/wɜːk/|v. 工作|I work at an airport.|我在机场工作。
         study|/ˈstʌdi/|v. 学习|I study English every day.|我每天学习英语。
-        learn|/lɜːn/|v. 学习；学会|We learn ten new words.|我们学习十个新单词。
+        learn|/lɜːn/|v. 学习；学会|We learn ten new words each day.|我们每天学十个新单词。
         like|/laɪk/|v. 喜欢|I like reading books.|我喜欢读书。
         want|/wɒnt/|v. 想要|I want to improve my English.|我想提高英语。
         need|/niːd/|v. 需要|I need more time.|我需要更多时间。
@@ -177,7 +177,7 @@ object SeedData {
         small|/smɔːl/|adj. 小的|I take small steps every day.|我每天迈出一小步。
         happy|/ˈhæpi/|adj. 开心的|Learning makes me happy.|学习让我开心。
         tired|/ˈtaɪəd/|adj. 疲惫的|I am tired after work.|下班后我很累。
-        new|/njuː/|adj. 新的|I learn a new word.|我学习一个新单词。
+        new|/njuː/|adj. 新的|Is that your new bike?|那是你的新自行车吗？
         old|/əʊld/|adj. 旧的；年老的|This is an old book.|这是一本旧书。
         hot|/hɒt/|adj. 热的|The water is hot.|水是热的。
         cold|/kəʊld/|adj. 冷的|It is cold this morning.|今天早晨很冷。
@@ -185,7 +185,7 @@ object SeedData {
         difficult|/ˈdɪfɪkəlt/|adj. 困难的|English is difficult but interesting.|英语很难但很有趣。
         interesting|/ˈɪntrəstɪŋ/|adj. 有趣的|The story is interesting.|这个故事很有趣。
         important|/ɪmˈpɔːtənt/|adj. 重要的|Practice is important.|练习很重要。
-        today|/təˈdeɪ/|n. 今天|I study ten words today.|我今天学习十个单词。
+        today|/təˈdeɪ/|n. 今天|I've learnt ten new words today.|我今天已经学了十个新单词。
         tomorrow|/təˈmɒrəʊ/|n. 明天|I will review them tomorrow.|我明天会复习它们。
         yesterday|/ˈjestədeɪ/|n. 昨天|I was busy yesterday.|我昨天很忙。
         morning|/ˈmɔːnɪŋ/|n. 早晨|I read in the morning.|我早晨阅读。
@@ -195,7 +195,7 @@ object SeedData {
         now|/naʊ/|adv. 现在|I am studying now.|我现在正在学习。
         time|/taɪm/|n. 时间|Learning takes time.|学习需要时间。
         day|/deɪ/|n. 天|I practice every day.|我每天练习。
-        week|/wiːk/|n. 星期|I read five books this week.|我这周读五本书。
+        week|/wiːk/|n. 星期|I've finished two books this week.|我这周已经看完两本书了。
         friend|/frend/|n. 朋友|He is my good friend.|他是我的好朋友。
         family|/ˈfæməli/|n. 家人|My family helps me.|我的家人帮助我。
         mother|/ˈmʌðə/|n. 母亲|My mother likes tea.|我妈妈喜欢茶。

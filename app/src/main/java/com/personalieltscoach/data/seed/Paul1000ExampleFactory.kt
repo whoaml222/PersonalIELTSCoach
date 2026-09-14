@@ -10,235 +10,29 @@ internal data class Paul1000Example(
 
 /**
  * Creates short, original examples intended for spoken English practice.
- * High-risk function words and irregular uses are written explicitly; content
- * words use small semantic groups instead of a single part-of-speech template.
+ * Every word has an explicit editorial example. Missing entries fail validation.
  */
 internal object Paul1000ExampleFactory {
     fun create(entry: Paul1000Entry, ordinal: Int): Paul1000Example {
         val key = entry.word.lowercase()
-        val meaning = normalizedMeanings[key] ?: entry.meaning
+        ReviewedExamples.find(key)?.let {
+            return example(entry.word, primaryGloss(normalizedMeaning(entry)), it.sentence, it.translation, "日常口语")
+        }
+        val meaning = normalizedMeaning(entry)
         val gloss = primaryGloss(meaning)
         special(key)?.let { (sentence, translation) ->
             return example(entry.word, gloss, sentence, translation, "日常口语")
         }
-        return when {
-            meaning.startsWith("n.") -> noun(entry.word, gloss, key, ordinal)
-            meaning.startsWith("adj.") -> adjective(entry.word, gloss, key, ordinal)
-            meaning.startsWith("vt.") -> transitiveVerb(entry.word, gloss, key, ordinal)
-            meaning.startsWith("vi.") -> intransitiveVerb(entry.word, gloss, key, ordinal)
-            meaning.startsWith("v.") || meaning.startsWith("vbl.") -> verb(entry.word, gloss, key, ordinal)
-            meaning.startsWith("adv.") || meaning.startsWith("neg.") -> adverb(entry.word, gloss, key, ordinal)
-            else -> error("Paul1000 word needs a contextual example: ${entry.word} (${entry.meaning})")
+        Nce1ExampleFactory.literalExample(key)?.let {
+            return example(entry.word, gloss, it.sentence, it.translation, "日常口语")
         }
+        error("Missing reviewed example: ${entry.word}")
     }
 
     fun normalizedMeaning(entry: Paul1000Entry): String =
-        normalizedMeanings[entry.word.lowercase()] ?: entry.meaning
+        ReviewedMeanings.forWord(entry.word, normalizedMeanings[entry.word.lowercase()] ?: entry.meaning)
 
-    private fun noun(word: String, gloss: String, key: String, ordinal: Int): Paul1000Example = when {
-        key in people -> pick(
-            ordinal,
-            example(word, gloss, "The $word is waiting outside.", "${gloss}正在外面等候。", "人物"),
-            example(word, gloss, "I spoke to the $word this morning.", "我今天早上和${gloss}谈过了。", "人物"),
-            example(word, gloss, "Can the $word help us with this?", "${gloss}能帮我们处理这件事吗？", "人物"),
-            example(word, gloss, "The $word will call you back later.", "${gloss}稍后会给你回电话。", "人物")
-        )
-        key in places -> pick(
-            ordinal,
-            example(word, gloss, "Is there a $word near here?", "这附近有${gloss}吗？", "地点"),
-            example(word, gloss, "I'll meet you outside the $word.", "我会在${gloss}外面等你。", "地点"),
-            example(word, gloss, "How far is the $word from here?", "${gloss}离这里有多远？", "地点"),
-            example(word, gloss, "The $word closes at six today.", "${gloss}今天六点关门。", "地点")
-        )
-        key in timeNouns -> pick(
-            ordinal,
-            example(word, gloss, "Do you have time this $word?", "你这个${gloss}有时间吗？", "时间"),
-            example(word, gloss, "We can talk about it next $word.", "我们可以下个${gloss}再谈。", "时间"),
-            example(word, gloss, "It happened around the same $word.", "事情大约发生在同一个${gloss}。", "时间"),
-            example(word, gloss, "That was the best part of my $word.", "那是我这个${gloss}中最开心的部分。", "时间")
-        )
-        key in bodyParts -> pick(
-            ordinal,
-            example(word, gloss, "My $word still hurts a little.", "我的${gloss}还有点疼。", "身体健康"),
-            example(word, gloss, "I hurt my $word at work.", "我工作时伤到了${gloss}。", "身体健康"),
-            example(word, gloss, "Keep your $word away from the moving part.", "让你的${gloss}远离运动部件。", "身体健康")
-        )
-        key in foodAndDrink -> pick(
-            ordinal,
-            example(word, gloss, "Would you like some $word?", "你想来点${gloss}吗？", "饮食"),
-            example(word, gloss, "We need more $word for dinner.", "晚饭还需要一些${gloss}。", "饮食"),
-            example(word, gloss, "This $word tastes really good.", "这个${gloss}味道很好。", "饮食")
-        )
-        key in abstractNouns -> pick(
-            ordinal,
-            example(word, gloss, "We need to talk about the $word.", "我们需要谈谈这个${gloss}。", "工作与生活"),
-            example(word, gloss, "The $word is important to me.", "这个${gloss}对我很重要。", "工作与生活"),
-            example(word, gloss, "I understand your $word.", "我理解你的${gloss}。", "工作与生活"),
-            example(word, gloss, "That $word makes a big difference.", "那个${gloss}会带来很大影响。", "工作与生活"),
-            example(word, gloss, "Can you explain the $word again?", "你能再解释一下这个${gloss}吗？", "工作与生活")
-        )
-        key in massNouns || isPlural(key) -> pick(
-            ordinal,
-            example(word, gloss, "Do we have enough $word?", "我们的${gloss}够吗？", "日常物品"),
-            example(word, gloss, "Where should we put the $word?", "我们应该把${gloss}放在哪里？", "日常物品"),
-            example(word, gloss, "The $word is ready to use.", "${gloss}已经可以使用了。", "日常物品"),
-            example(word, gloss, "I checked the $word this morning.", "我今天早上检查了${gloss}。", "日常物品")
-        )
-        else -> {
-            val article = articleFor(word)
-            pick(
-                ordinal,
-                example(word, gloss, "Do we need $article $word for this?", "这件事需要一个${gloss}吗？", "日常物品"),
-                example(word, gloss, "Where did you put the $word?", "你把${gloss}放在哪里了？", "日常物品"),
-                example(word, gloss, "I found $article $word in the cupboard.", "我在柜子里找到了一个${gloss}。", "日常物品"),
-                example(word, gloss, "Can you bring me the $word?", "你能把${gloss}拿给我吗？", "日常物品"),
-                example(word, gloss, "This $word looks fine to me.", "这个${gloss}我看没问题。", "日常物品"),
-                example(word, gloss, "I bought $article $word yesterday.", "我昨天买了一个${gloss}。", "日常物品"),
-                example(word, gloss, "Is this the $word you wanted?", "这是你想要的${gloss}吗？", "日常物品"),
-                example(word, gloss, "We may need another $word.", "我们可能还需要一个${gloss}。", "日常物品"),
-                example(word, gloss, "The $word is on the table.", "${gloss}在桌上。", "日常物品"),
-                example(word, gloss, "I can't find the $word.", "我找不到${gloss}了。", "日常物品"),
-                example(word, gloss, "The $word is in the bag.", "${gloss}在包里。", "日常物品")
-            )
-        }
-    }
-
-    private fun adjective(word: String, gloss: String, key: String, ordinal: Int): Paul1000Example = when {
-        key in colours -> pick(
-            ordinal,
-            example(word, gloss, "I like the $word one better.", "我更喜欢${gloss}的那个。", "颜色外观"),
-            example(word, gloss, "Can you see the $word sign?", "你能看到那个${gloss}标志吗？", "颜色外观"),
-            example(word, gloss, "She wore a $word jacket today.", "她今天穿了一件${gloss}夹克。", "颜色外观")
-        )
-        key in feelings -> pick(
-            ordinal,
-            example(word, gloss, "I feel $word today.", "我今天感觉很${gloss}。", "感受"),
-            example(word, gloss, "You look $word. Are you okay?", "你看起来很${gloss}，还好吗？", "感受"),
-            example(word, gloss, "It's normal to feel $word sometimes.", "有时感到${gloss}很正常。", "感受")
-        )
-        key in sizeAndCondition -> pick(
-            ordinal,
-            example(word, gloss, "This one is too $word for me.", "这个对我来说太${gloss}了。", "尺寸状态"),
-            example(word, gloss, "Is the box $word enough?", "这个箱子够${gloss}吗？", "尺寸状态"),
-            example(word, gloss, "We need something less $word.", "我们需要一个不那么${gloss}的东西。", "尺寸状态"),
-            example(word, gloss, "The $word one is easier to carry.", "那个${gloss}的更容易携带。", "尺寸状态")
-        )
-        key in weatherAdjectives -> pick(
-            ordinal,
-            example(word, gloss, "It's quite $word outside today.", "今天外面很${gloss}。", "天气"),
-            example(word, gloss, "The road gets dangerous when it's $word.", "天气${gloss}时道路会变危险。", "天气"),
-            example(word, gloss, "Tomorrow should be less $word.", "明天应该没这么${gloss}。", "天气")
-        )
-        key in classifyingAdjectives -> pick(
-            ordinal,
-            example(word, gloss, "Is this a $word issue?", "这是一个${gloss}问题吗？", "工作与社会"),
-            example(word, gloss, "We need $word advice on this.", "这件事我们需要${gloss}建议。", "工作与社会"),
-            example(word, gloss, "The $word rules are quite clear.", "相关的${gloss}规定很明确。", "工作与社会")
-        )
-        else -> pick(
-            ordinal,
-            example(word, gloss, "That sounds $word to me.", "我觉得那听起来很${gloss}。", "描述判断"),
-            example(word, gloss, "The situation is still $word.", "情况仍然很${gloss}。", "描述判断"),
-            example(word, gloss, "Is it really that $word?", "真的有那么${gloss}吗？", "描述判断"),
-            example(word, gloss, "It seemed $word at first.", "起初看起来很${gloss}。", "描述判断"),
-            example(word, gloss, "This option looks more $word.", "这个选择看起来更${gloss}。", "描述判断"),
-            example(word, gloss, "Why is it so $word?", "为什么它这么${gloss}？", "描述判断"),
-            example(word, gloss, "I didn't expect it to be this $word.", "我没想到它会这么${gloss}。", "描述判断"),
-            example(word, gloss, "Do you think that's $word?", "你觉得那是${gloss}的吗？", "描述判断"),
-            example(word, gloss, "Everything looks $word now.", "现在一切看起来都很${gloss}。", "描述判断"),
-            example(word, gloss, "The result was surprisingly $word.", "结果出乎意料地${gloss}。", "描述判断")
-        )
-    }
-
-    private fun transitiveVerb(word: String, gloss: String, key: String, ordinal: Int): Paul1000Example = when {
-        key in communicationVerbs -> pick(
-            ordinal,
-            example(word, gloss, "Can you $word me after work?", "你下班后能${gloss}我吗？", "沟通"),
-            example(word, gloss, "Please $word the customer first.", "请先${gloss}顾客。", "沟通"),
-            example(word, gloss, "I need to $word them today.", "我今天需要${gloss}他们。", "沟通")
-        )
-        key in movementVerbs -> pick(
-            ordinal,
-            example(word, gloss, "Can you $word this box?", "你能${gloss}这个箱子吗？", "动作"),
-            example(word, gloss, "Please $word it over here.", "请把它${gloss}到这里。", "动作"),
-            example(word, gloss, "We need to $word the table first.", "我们需要先${gloss}这张桌子。", "动作")
-        )
-        key in thinkingVerbs -> pick(
-            ordinal,
-            example(word, gloss, "I don't $word that at all.", "我完全不${gloss}那件事。", "想法"),
-            example(word, gloss, "Do you $word what happened?", "你${gloss}发生了什么吗？", "想法"),
-            example(word, gloss, "Please $word this for a moment.", "请${gloss}一下这件事。", "想法")
-        )
-        else -> pick(
-            ordinal,
-            example(word, gloss, "We need to $word this today.", "我们今天需要${gloss}这件事。", "常用动作"),
-            example(word, gloss, "Can you $word it for me?", "你能帮我${gloss}它吗？", "常用动作"),
-            example(word, gloss, "Could you $word this one first?", "你能先${gloss}这个吗？", "常用动作"),
-            example(word, gloss, "I can $word that after lunch.", "我可以午饭后${gloss}那件事。", "常用动作"),
-            example(word, gloss, "Let's $word this before lunch.", "我们午饭前${gloss}这件事吧。", "常用动作"),
-            example(word, gloss, "They asked us to $word it.", "他们让我们${gloss}它。", "常用动作"),
-            example(word, gloss, "I need help to $word this.", "我需要别人帮忙${gloss}这件事。", "常用动作"),
-            example(word, gloss, "Could we $word that tomorrow?", "我们明天能${gloss}那件事吗？", "常用动作")
-        )
-    }
-
-    private fun intransitiveVerb(word: String, gloss: String, key: String, ordinal: Int): Paul1000Example = when {
-        key in movementIntransitive -> pick(
-            ordinal,
-            example(word, gloss, "We can $word after lunch.", "我们可以午饭后${gloss}。", "动作"),
-            example(word, gloss, "I usually $word around six.", "我通常六点左右${gloss}。", "动作"),
-            example(word, gloss, "Please don't $word yet.", "请先不要${gloss}。", "动作")
-        )
-        key in eventVerbs -> pick(
-            ordinal,
-            example(word, gloss, "It could $word again tomorrow.", "明天可能会再次${gloss}。", "变化"),
-            example(word, gloss, "Things can $word very quickly.", "事情可能很快${gloss}。", "变化"),
-            example(word, gloss, "What made it $word?", "是什么让它${gloss}的？", "变化")
-        )
-        else -> pick(
-            ordinal,
-            example(word, gloss, "I hope we can $word soon.", "我希望我们很快能${gloss}。", "常用动作"),
-            example(word, gloss, "It may $word later today.", "今天晚些时候它可能会${gloss}。", "常用动作"),
-            example(word, gloss, "They often $word at the same time.", "他们经常同时${gloss}。", "常用动作")
-        )
-    }
-
-    private fun verb(word: String, gloss: String, key: String, ordinal: Int): Paul1000Example = when (key) {
-        "has" -> example(word, gloss, "She has a meeting at ten.", "她十点有个会议。", "基础语法")
-        else -> pick(
-            ordinal,
-            example(word, gloss, "I usually $word after work.", "我通常下班后${gloss}。", "常用动作"),
-            example(word, gloss, "Can we $word now?", "我们现在可以${gloss}吗？", "常用动作"),
-            example(word, gloss, "They $word together every week.", "他们每周一起${gloss}。", "常用动作")
-        )
-    }
-
-    private fun adverb(word: String, gloss: String, key: String, ordinal: Int): Paul1000Example = when {
-        key in frequencyAdverbs -> pick(
-            ordinal,
-            example(word, gloss, "I $word take the bus to work.", "我${gloss}坐公交车上班。", "频率"),
-            example(word, gloss, "We $word eat lunch together.", "我们${gloss}一起吃午饭。", "频率"),
-            example(word, gloss, "She $word calls after work.", "她${gloss}下班后打电话。", "频率")
-        )
-        key in timeAdverbs -> pick(
-            ordinal,
-            example(word, gloss, "I'll call you $word.", "我会${gloss}给你打电话。", "时间"),
-            example(word, gloss, "We can finish it $word.", "我们可以${gloss}完成。", "时间"),
-            example(word, gloss, "Are you free $word?", "你${gloss}有空吗？", "时间")
-        )
-        key in placeAdverbs -> pick(
-            ordinal,
-            example(word, gloss, "I left my bag $word.", "我把包落在${gloss}了。", "地点方向"),
-            example(word, gloss, "Can we meet $word?", "我们能在${gloss}见面吗？", "地点方向"),
-            example(word, gloss, "There's a small café $word.", "${gloss}有一家小咖啡馆。", "地点方向")
-        )
-        else -> pick(
-            ordinal,
-            example(word, gloss, "Please check it $word.", "请${gloss}检查一下。", "表达方式"),
-            example(word, gloss, "She explained it $word.", "她${gloss}解释了这件事。", "表达方式"),
-            example(word, gloss, "We finished the job $word.", "我们${gloss}完成了工作。", "表达方式")
-        )
-    }
+    internal fun literalExample(key: String): Pair<String, String>? = special(key)
 
     private fun special(key: String): Pair<String, String>? = when (key) {
         "a" -> "I need a minute." to "我需要一分钟。"
@@ -502,12 +296,9 @@ internal object Paul1000ExampleFactory {
         sentence = sentence,
         translation = translation,
         chunks = "$word~$gloss^$sentence~$translation",
-        note = "$word 在这里表示“$gloss”。",
+        note = "先理解整句，再点击单词查看它在句中的用法。",
         category = category
     )
-
-    private fun pick(ordinal: Int, vararg choices: Paul1000Example): Paul1000Example =
-        choices[Math.floorMod(ordinal, choices.size)]
 
     private fun primaryGloss(meaning: String): String = meaning
         .substringAfter('.', meaning)
@@ -515,12 +306,6 @@ internal object Paul1000ExampleFactory {
         .substringBefore('，')
         .trim()
         .ifBlank { meaning }
-
-    private fun articleFor(word: String): String =
-        if (word.firstOrNull()?.lowercaseChar()?.let { it in "aeiou" } == true) "an" else "a"
-
-    private fun isPlural(word: String): Boolean =
-        word in knownPlurals || (word.endsWith('s') && word !in singularEndingInS)
 
     private val normalizedMeanings = mapOf(
         "are" to "v. 是；在（用于 you、we、they）",
@@ -536,93 +321,4 @@ internal object Paul1000ExampleFactory {
         "wrong" to "adj. 错误的；不合适的"
     )
 
-    private val people = setOf(
-        "adult", "baby", "boy", "brother", "child", "customer", "daughter", "doctor",
-        "employee", "father", "friend", "girl", "guest", "husband", "lady", "manager",
-        "man", "member", "mother", "neighbor", "parent", "partner", "patient", "person",
-        "police", "president", "sister", "son", "staff", "student", "teacher", "team",
-        "visitor", "wife", "woman", "worker"
-    )
-    private val places = setOf(
-        "area", "bank", "building", "capital", "center", "church", "city", "club", "country",
-        "court", "department", "field", "floor", "home", "hospital", "hotel", "house", "kitchen",
-        "market", "office", "park", "place", "restaurant", "road", "room", "school", "shop",
-        "station", "street", "town", "village"
-    )
-    private val timeNouns = setOf(
-        "afternoon", "age", "century", "date", "day", "evening", "hour", "minute", "moment",
-        "month", "morning", "night", "period", "season", "second", "time", "week", "weekend", "year"
-    )
-    private val bodyParts = setOf(
-        "arm", "back", "blood", "body", "brain", "ear", "eye", "face", "finger", "foot",
-        "hair", "hand", "head", "heart", "leg", "mouth", "neck", "shoulder", "skin", "tooth"
-    )
-    private val foodAndDrink = setOf(
-        "beer", "bread", "breakfast", "coffee", "dinner", "drink", "fish", "food", "fruit",
-        "lunch", "meal", "meat", "milk", "rice", "tea", "water", "wine"
-    )
-    private val abstractNouns = setOf(
-        "ability", "action", "advice", "agreement", "attention", "behavior", "benefit", "business",
-        "care", "case", "cause", "chance", "change", "choice", "condition", "control", "cost",
-        "culture", "damage", "decision", "difference", "direction", "education", "effect", "effort",
-        "energy", "event", "evidence", "experience", "fact", "faith", "fear", "feeling", "force",
-        "freedom", "future", "goal", "growth", "health", "help", "history", "hope", "idea",
-        "importance", "income", "industry", "information", "interest", "job", "knowledge", "language",
-        "law", "level", "life", "love", "meaning", "method", "movement", "nature", "need", "news",
-        "opinion", "option", "order", "permission", "plan", "policy", "position", "power", "problem",
-        "process", "program", "progress", "purpose", "quality", "question", "reason", "relationship",
-        "research", "result", "risk", "rule", "safety", "service", "situation", "skill", "society",
-        "strength", "success", "support", "system", "technology", "theory", "thought", "training",
-        "truth", "value", "view", "work"
-    )
-    private val massNouns = setOf(
-        "air", "clothing", "data", "equipment", "furniture", "glass", "gold", "grass", "ice",
-        "light", "money", "music", "paper", "rain", "snow", "space", "traffic", "weather", "wood"
-    )
-    private val knownPlurals = setOf("children", "clothes", "goods", "people", "things")
-    private val singularEndingInS = setOf("business", "class", "glass", "news", "process", "series")
-    private val colours = setOf("black", "blue", "brown", "green", "red", "white", "yellow")
-    private val feelings = setOf(
-        "afraid", "alone", "angry", "comfortable", "confident", "glad", "happy", "nervous",
-        "ready", "sad", "serious", "sorry", "surprised", "tired", "worried"
-    )
-    private val sizeAndCondition = setOf(
-        "big", "clean", "deep", "dry", "empty", "flat", "full", "heavy", "high", "large", "light",
-        "little", "long", "low", "narrow", "new", "old", "open", "rough", "short", "small", "soft",
-        "strong", "thick", "thin", "tight", "wide", "young"
-    )
-    private val weatherAdjectives = setOf("bright", "cold", "cool", "dark", "hot", "warm", "wet")
-    private val classifyingAdjectives = setOf(
-        "central", "cultural", "economic", "educational", "environmental", "financial", "foreign",
-        "global", "international", "legal", "local", "medical", "military", "national", "natural",
-        "physical", "political", "private", "professional", "public", "religious", "social", "technical"
-    )
-    private val communicationVerbs = setOf(
-        "advise", "answer", "ask", "call", "contact", "invite", "mention", "question", "remind", "tell", "warn"
-    )
-    private val movementVerbs = setOf(
-        "bring", "carry", "catch", "draw", "drive", "drop", "hold", "lift", "move", "pass", "pull",
-        "push", "put", "raise", "send", "throw", "transfer", "turn"
-    )
-    private val thinkingVerbs = setOf(
-        "accept", "believe", "consider", "expect", "forget", "imagine", "know", "notice", "realize",
-        "recognize", "remember", "suppose", "trust", "understand"
-    )
-    private val movementIntransitive = setOf(
-        "arrive", "come", "dance", "fall", "fly", "go", "jump", "leave", "run", "sit", "sleep",
-        "stand", "stay", "swim", "travel", "wait", "walk", "work"
-    )
-    private val eventVerbs = setOf(
-        "appear", "begin", "change", "continue", "develop", "die", "end", "exist", "grow", "happen",
-        "increase", "occur", "remain", "rise", "start", "stop"
-    )
-    private val frequencyAdverbs = setOf("always", "never", "often", "sometimes", "usually")
-    private val timeAdverbs = setOf(
-        "afterward", "ago", "currently", "eventually", "immediately", "later", "next", "now",
-        "recently", "soon", "today", "yesterday"
-    )
-    private val placeAdverbs = setOf(
-        "anywhere", "around", "away", "below", "down", "everywhere", "here", "nowhere", "out",
-        "over", "somewhere", "there", "up"
-    )
 }

@@ -67,8 +67,12 @@ jobs:
         run: |
           tag="${{ steps.release.outputs.tag }}"
           cp app/build/outputs/apk/release/app-release.apk "PersonalIELTSCoach-${tag}.apk"
+          notes=(--generate-notes)
+          if [ -f "docs/releases/${tag}.md" ]; then
+            notes=(--notes-file "docs/releases/${tag}.md")
+          fi
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            gh release create "$tag" "PersonalIELTSCoach-${tag}.apk" --generate-notes --verify-tag
+            gh release create "$tag" "PersonalIELTSCoach-${tag}.apk" "${notes[@]}" --verify-tag
           else
-            gh release create "$tag" "PersonalIELTSCoach-${tag}.apk" --generate-notes --target "$GITHUB_SHA"
+            gh release create "$tag" "PersonalIELTSCoach-${tag}.apk" "${notes[@]}" --target "$GITHUB_SHA"
           fi

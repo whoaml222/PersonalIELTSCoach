@@ -18,8 +18,8 @@ android {
         applicationId = "com.personalieltscoach"
         minSdk = 26
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.6.3"
+        versionCode = 13
+        versionName = "1.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -65,6 +65,12 @@ android {
         jvmTarget = "17"
     }
 
+    testOptions.unitTests {
+        isIncludeAndroidResources = true
+        // The upgrade matrix loads three Android runtimes alongside Compose and offline assets.
+        all { it.maxHeapSize = "1g" }
+    }
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
@@ -102,6 +108,8 @@ dependencies {
     testImplementation("androidx.room:room-testing:2.6.1")
     testImplementation("androidx.test:core:1.6.1")
     testImplementation("org.robolectric:robolectric:4.12.2")
+    testImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

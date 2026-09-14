@@ -25,6 +25,8 @@ interface UserProfileDao {
 
 @Dao
 interface WordDao {
+    @Query("SELECT * FROM words WHERE id = :id")
+    suspend fun getById(id: Long): WordItemEntity?
     @Query("SELECT * FROM words ORDER BY id")
     fun observeAll(): Flow<List<WordItemEntity>>
 
@@ -78,6 +80,9 @@ interface WordDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(word: WordItemEntity): Long
+
+    @Query("UPDATE words SET example = :example, exampleTranslation = :translation WHERE source = 'CORE' AND word = :word")
+    suspend fun updateCoreExample(word: String, example: String, translation: String)
 
     @Query(
         "UPDATE words SET phonetic = :phonetic, meaning = :meaning, example = :example, " +

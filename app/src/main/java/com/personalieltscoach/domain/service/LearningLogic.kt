@@ -75,11 +75,24 @@ object ReviewScheduler {
 }
 
 object TextSegmenter {
-    fun sentences(text: String): List<String> =
-        text.trim()
-            .split(Regex("(?<=[.!?。！？])\\s+|\\n+"))
-            .map(String::trim)
-            .filter(String::isNotBlank)
+    fun sentences(text: String): List<String> = text.trim().split(Regex("\\n\\s*\\n")).flatMap { paragraph ->
+        val clean = paragraph.replace(Regex("\\s+"), " ").trim()
+        val result = mutableListOf<String>()
+        var start = 0
+        Regex("[.!?。！？]+[\"”’']*(?:\\s+|$)").findAll(clean).forEach { boundary ->
+            val punctuation = boundary.range.first
+            val preceding = clean.substring(0, punctuation + 1).substringAfterLast(' ')
+            val abbreviation = clean[punctuation] == '.' && (
+                preceding.lowercase() in setOf("mr.", "mrs.", "ms.", "dr.", "prof.", "st.", "e.g.", "i.e.") ||
+                    Regex("(?:[A-Za-z]\\.)+").matches(preceding))
+            if (!abbreviation) {
+                result += clean.substring(start, boundary.range.last + 1).trim()
+                start = boundary.range.last + 1
+            }
+        }
+        if (start < clean.length) result += clean.substring(start).trim()
+        result.filter(String::isNotBlank)
+    }
 
     fun words(text: String): List<String> =
         Regex("[A-Za-z]+(?:['’-][A-Za-z]+)*")

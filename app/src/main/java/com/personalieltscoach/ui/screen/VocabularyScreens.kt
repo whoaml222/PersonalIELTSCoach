@@ -87,12 +87,13 @@ fun VocabularyScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                 mode = mode,
                 allWords = allWords,
                 speech = speech,
-                answer = { correct ->
+                answer = { correct, saved ->
                     viewModel.answerWord(
                         word = word,
                         correct = correct,
                         review = false,
-                        reloadSession = false
+                        reloadSession = false,
+                        onSaved = saved
                     )
                 },
                 onNext = { viewModel.advanceNewWord(word.id) }
@@ -114,7 +115,7 @@ private fun WordModeSelector(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp)
+            .heightIn(min = 56.dp)
             .clip(shape)
             .border(1.dp, MaterialTheme.colorScheme.outline, shape)
     ) {
@@ -122,7 +123,6 @@ private fun WordModeSelector(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxHeight()
                     .background(
                         if (selected == item) MaterialTheme.colorScheme.primaryContainer
                         else MaterialTheme.colorScheme.surface
@@ -132,8 +132,9 @@ private fun WordModeSelector(
             ) {
                 Text(
                     item.label,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 12.dp),
                     fontSize = 12.sp,
                     fontWeight = if (selected == item) FontWeight.Bold else FontWeight.Medium
                 )
@@ -151,13 +152,14 @@ private fun WordExerciseCard(
     mode: WordMode,
     allWords: List<WordItemEntity>,
     speech: SpeechController,
-    answer: (Boolean) -> Unit,
+    answer: (Boolean, (Boolean) -> Unit) -> Unit,
     onNext: () -> Unit
 ) {
     var input by remember(word.id, mode) { mutableStateOf("") }
     var revealed by remember(word.id, mode) { mutableStateOf(false) }
     var result by remember(word.id, mode) { mutableStateOf<Boolean?>(null) }
     var selectedOption by remember(word.id, mode) { mutableStateOf<String?>(null) }
+    var saving by remember(word.id, mode) { mutableStateOf(false) }
     val options = remember(word.id, allWords.size) {
         val distractors = allWords.asSequence()
             .filter { it.id != word.id && it.meaning != word.meaning }
@@ -169,10 +171,13 @@ private fun WordExerciseCard(
         (distractors + word.meaning).shuffled()
     }
     fun submit(correct: Boolean) {
-        if (result != null) return
+        if (result != null || saving) return
         revealed = true
-        result = correct
-        answer(correct)
+        saving = true
+        answer(correct) { saved ->
+            saving = false
+            if (saved) result = correct
+        }
     }
     SectionCard(
         when (mode) {
@@ -182,7 +187,7 @@ private fun WordExerciseCard(
         }
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(
                     if (mode == WordMode.EN_TO_ZH) {
                         word.word
@@ -275,13 +280,16 @@ private fun WordExerciseCard(
             )
             Text(word.exampleTranslation, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (result == null) {
+                if (saving) Text("正在保存…", style = MaterialTheme.typography.bodySmall)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
                         onClick = { submit(false) },
+                        enabled = !saving,
                         modifier = Modifier.weight(1f)
                     ) { Text("还没记住") }
                     Button(
                         onClick = { submit(true) },
+                        enabled = !saving,
                         modifier = Modifier.weight(1f)
                     ) { Text("我记住了") }
                 }
@@ -301,6 +309,7 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
     val word = words.firstOrNull()
     var showAnswer by remember(word?.id) { mutableStateOf(false) }
     var result by remember(word?.id) { mutableStateOf<Boolean?>(null) }
+    var saving by remember(word?.id) { mutableStateOf(false) }
     val speech = rememberSpeechController()
 
     LaunchedEffect(Unit) { viewModel.loadDueWords() }
@@ -359,16 +368,24 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             OutlinedButton(
                                 onClick = {
-                                    result = false
-                                    viewModel.answerWord(word, false, review = true, reloadSession = false)
+                                    saving = true
+                                    viewModel.answerWord(word, false, review = true, reloadSession = false) {
+                                        saving = false
+                                        if (it) result = false
+                                    }
                                 },
+                                enabled = !saving,
                                 modifier = Modifier.weight(1f)
                             ) { Text("没想起来") }
                             Button(
                                 onClick = {
-                                    result = true
-                                    viewModel.answerWord(word, true, review = true, reloadSession = false)
+                                    saving = true
+                                    viewModel.answerWord(word, true, review = true, reloadSession = false) {
+                                        saving = false
+                                        if (it) result = true
+                                    }
                                 },
+                                enabled = !saving,
                                 modifier = Modifier.weight(1f)
                             ) { Text("答对了") }
                         }

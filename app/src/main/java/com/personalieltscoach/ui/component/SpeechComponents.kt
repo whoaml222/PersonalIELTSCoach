@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +23,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.onClick
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -49,6 +59,9 @@ class SpeechController internal constructor(
     private var player: MediaPlayer? = null
     private var requestId = 0L
     private var currentRate = 0.92f
+    private val audioFocus = com.personalieltscoach.speech.AudioFocusGuard(application) { stop() }
+    var currentText by mutableStateOf("")
+        private set
 
     var status by mutableStateOf(SpeechStatus.READY)
         private set
@@ -75,21 +88,35 @@ class SpeechController internal constructor(
         requestSpeech(text, retryCount = 0)
     }
 
-    internal fun release() {
+    fun stop() {
         requestId += 1
         requestJob?.cancel()
         requestJob = null
         stopPlayer()
+        audioFocus.release()
+        currentText = ""
+        status = SpeechStatus.READY
+    }
+
+    internal fun release() {
+        stop()
         scope.cancel()
     }
 
     private fun requestSpeech(text: String, retryCount: Int) {
-        val normalized = text.trim().take(MAX_INPUT_CHARACTERS)
+        val normalized = text.trim()
         if (normalized.isBlank()) return
+        if (normalized.length > MAX_INPUT_CHARACTERS) {
+            stop()
+            showError("这段文字过长，请分句朗读，或播放课文原录音（单次上限 500 字符）")
+            return
+        }
         requestId += 1
         val currentRequest = requestId
         requestJob?.cancel()
         stopPlayer()
+        audioFocus.release()
+        currentText = normalized
         lastError = null
         status = SpeechStatus.LOADING
         requestJob = scope.launch {
@@ -116,6 +143,8 @@ class SpeechController internal constructor(
         if (currentRequest != requestId) return
         if (index >= files.size) {
             status = SpeechStatus.READY
+            currentText = ""
+            audioFocus.release()
             return
         }
         val file = files[index]
@@ -132,9 +161,14 @@ class SpeechController internal constructor(
                 prepared.release()
                 return@setOnPreparedListener
             }
-            applyPlaybackRate(prepared)
-            status = SpeechStatus.PLAYING
-            prepared.start()
+            if (!audioFocus.acquire()) {
+                stopPlayer()
+                showError("当前音频正在被其他应用使用，请稍后重试")
+            } else {
+                runCatching { prepared.start(); applyPlaybackRate(prepared) }
+                    .onSuccess { status = SpeechStatus.PLAYING }
+                    .onFailure { stopPlayer(); showError("音频无法开始播放，请重试") }
+            }
         }
         next.setOnCompletionListener { completed ->
             completed.release()
@@ -181,6 +215,7 @@ class SpeechController internal constructor(
     }
 
     private fun showError(message: String) {
+        audioFocus.release()
         lastError = message
         status = SpeechStatus.ERROR
         Toast.makeText(application, message, Toast.LENGTH_LONG).show()
@@ -209,8 +244,11 @@ fun rememberSpeechController(): SpeechController {
     val controller = remember(application) {
         SpeechController(application, application.container.settingsRepository)
     }
-    DisposableEffect(controller) {
-        onDispose(controller::release)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(controller, lifecycle) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) controller.stop() }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer); controller.release() }
     }
     return controller
 }
@@ -222,16 +260,19 @@ fun SpeechButton(
     modifier: Modifier = Modifier,
     contentDescription: String = "使用英音词典朗读"
 ) {
+    val active = speech.currentText == text.trim() &&
+        speech.status in setOf(SpeechStatus.LOADING, SpeechStatus.PLAYING)
     FilledTonalIconButton(
-        onClick = { speech.speak(text) },
-        enabled = text.isNotBlank() && speech.isReady,
-        modifier = modifier.size(52.dp)
+        onClick = { if (active) speech.stop() else speech.speak(text) },
+        enabled = text.isNotBlank(),
+        modifier = modifier.size(48.dp).semantics {
+            this.contentDescription = if (active) "停止朗读" else contentDescription
+        }
     ) {
-        Icon(
-            Icons.AutoMirrored.Filled.VolumeUp,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(28.dp)
-        )
+        if (active && speech.status == SpeechStatus.LOADING)
+            CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+        else Icon(if (active) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp,
+            contentDescription = null, modifier = Modifier.size(24.dp))
     }
 }
 
@@ -242,9 +283,18 @@ fun SpokenEnglishText(
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyLarge,
     wordColor: Color = MaterialTheme.colorScheme.primary,
-    showHint: Boolean = false
+    showHint: Boolean = false,
+    contextMeanings: Map<String, String> = emptyMap(),
+    grammar: List<com.personalieltscoach.domain.service.GrammarToken> = emptyList(),
+    onCollect: ((com.personalieltscoach.domain.service.WordContext) -> Unit)? = null
 ) {
     if (text.isBlank()) return
+    var selectedOffset by remember(text) { mutableStateOf<Int?>(null) }
+    selectedOffset?.let { offset ->
+        val selected = ENGLISH_WORD.findAll(text).firstOrNull { offset in it.range }?.value?.lowercase()
+        WordContextSheet(text, offset, speech, onDismiss = { selectedOffset = null },
+            contextualMeaning = contextMeanings[selected].orEmpty(), grammar = grammar, onCollect = onCollect)
+    }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -255,7 +305,7 @@ fun SpokenEnglishText(
         ) {
             ClickableEnglishText(
                 text = text,
-                onWordClick = speech::speak,
+                onWordClick = { selectedOffset = it },
                 modifier = Modifier.weight(1f),
                 style = style,
                 wordColor = wordColor
@@ -264,7 +314,7 @@ fun SpokenEnglishText(
         }
         if (showHint) {
             Text(
-                "点击单词或扬声器使用在线英音词典；播放过的音频会缓存，可离线重听。",
+                "点词看释义与用法 · 点右侧听整句",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -276,7 +326,7 @@ fun SpokenEnglishText(
 @Composable
 private fun ClickableEnglishText(
     text: String,
-    onWordClick: (String) -> Unit,
+    onWordClick: (Int) -> Unit,
     modifier: Modifier,
     style: TextStyle,
     wordColor: Color
@@ -295,12 +345,21 @@ private fun ClickableEnglishText(
     }
     ClickableText(
         text = annotated,
-        modifier = modifier,
+        modifier = modifier.semantics {
+            // Pointer-only text excludes TalkBack and keyboard users from word lookup.
+            onClick(label = "查看句中单词") {
+                matches.firstOrNull()?.let { onWordClick(it.range.first) }
+                matches.isNotEmpty()
+            }
+            customActions = matches.distinctBy { it.value.lowercase() }.map { match ->
+                CustomAccessibilityAction("查词 ${match.value}") { onWordClick(match.range.first); true }
+            }
+        },
         style = style,
         onClick = { offset ->
-            matches.firstOrNull { offset in it.range }?.value?.let(onWordClick)
+            matches.firstOrNull { offset in it.range }?.let { onWordClick(offset) }
         }
     )
 }
 
-private val ENGLISH_WORD = Regex("[A-Za-z]+(?:['’][A-Za-z]+)*")
+private val ENGLISH_WORD = com.personalieltscoach.domain.service.ContextDictionary.tokens

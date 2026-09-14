@@ -11,6 +11,9 @@ class UpdateDownloadManager(private val context: Context) {
     private val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
     fun enqueue(update: AppUpdate): PendingUpdateDownload {
+        require(Regex("[0-9]{1,6}(?:\\.[0-9]{1,6}){1,3}").matches(update.version))
+        val uri = Uri.parse(update.downloadUrl)
+        require(uri.scheme == "https" && uri.host == "github.com")
         clearPending(removeFile = true)
         val safeName = "PersonalIELTSCoach-v${update.version}.apk"
         val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), safeName)
@@ -58,7 +61,12 @@ class UpdateDownloadManager(private val context: Context) {
 
     fun clearPending(removeFile: Boolean = false) {
         if (removeFile) {
-            preferences.getString(KEY_PATH, null)?.let { File(it).delete() }
+            preferences.getString(KEY_PATH, null)?.let { path ->
+                val root = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.canonicalFile
+                val file = File(path).canonicalFile
+                if (root != null && file.parentFile == root &&
+                    Regex("PersonalIELTSCoach-v[0-9.]+\\.apk").matches(file.name)) file.delete()
+            }
         }
         preferences.edit().clear().apply()
     }
@@ -79,4 +87,3 @@ class UpdateDownloadManager(private val context: Context) {
         private const val KEY_VERSION = "version"
     }
 }
-

@@ -8,3 +8,5 @@ captures/
 tmp/
 .tools/
 .signing/
+output/reading-private/
+scripts/__pycache__/

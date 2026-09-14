@@ -15,6 +15,7 @@ import com.personalieltscoach.domain.service.StreakCalculator
 import com.personalieltscoach.domain.service.TextSegmenter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import java.security.MessageDigest
 import java.time.Instant
@@ -36,12 +37,10 @@ class CoachRepository(
     val reviewingCount: Flow<Int> = database.wordDao().observeStatusCount("REVIEWING")
     val wrongCount: Flow<Int> = database.wordDao().observeWrongCount()
     val writingCount: Flow<Int> = database.writingDao().observeCount()
-    val sentencePackStats: Flow<SentencePackStats> = combine(
-        database.sentenceCardDao().observeCount(),
-        database.sentenceCardDao().observeStartedCount(),
-        database.sentenceCardDao().observeMasteredCount()
-    ) { total, started, mastered ->
-        SentencePackStats(total = total, started = started, mastered = mastered)
+    val sentencePackStats: Flow<SentencePackStats> = allWords.map { words ->
+        val paul = words.filter { it.source == WordSource.PAUL1000 }
+        SentencePackStats(total = paul.size, started = paul.count { it.status != "NEW" },
+            mastered = paul.count { it.status == "MASTERED" })
     }
 
     fun plan(date: String): Flow<DailyPlanEntity?> = database.planDao().observePlan(date)
@@ -68,6 +67,9 @@ class CoachRepository(
             // If a learner already knew the same word in the original core pack,
             // do not show it again as a brand-new NCE word after upgrading.
             database.wordDao().inheritLegacyProgressForNce()
+            SeedData.words(now).forEach { word ->
+                database.wordDao().updateCoreExample(word.word, word.example, word.exampleTranslation)
+            }
             // Content can improve independently from review progress. Update only
             // the bundled NCE fields, leaving ids, status, streaks, wrong answers,
             // review dates and timestamps untouched for existing learners.
@@ -305,15 +307,17 @@ class CoachRepository(
 
     suspend fun answerWord(word: WordItemEntity, correct: Boolean, isReview: Boolean) {
         val now = System.currentTimeMillis()
-        val update = ReviewScheduler.next(correct, word.correctStreak, word.wrongCount, now)
         database.withTransaction {
+            val fresh = database.wordDao().getById(word.id) ?: return@withTransaction
+            if (fresh.status != "NEW" && fresh.updatedAt >= dayStart(now)) return@withTransaction
+            val update = ReviewScheduler.next(correct, fresh.correctStreak, fresh.wrongCount, now)
             database.wordDao().upsert(
-                word.copy(
+                fresh.copy(
                     status = update.status,
                     correctStreak = update.correctStreak,
                     wrongCount = update.wrongCount,
                     nextReviewAt = update.nextReviewAt,
-                    lastWrongAt = if (correct) word.lastWrongAt else now,
+                    lastWrongAt = if (correct) fresh.lastWrongAt else now,
                     updatedAt = now
                 )
             )
@@ -459,6 +463,8 @@ class CoachRepository(
             database.aiDao().clearSentenceCache()
             database.aiDao().clearResponseCache()
             database.aiDao().clearUsage()
+            database.readingDao().clearProgress()
+            database.readingDao().clearVocabulary()
         }
         initializeIfNeeded()
     }

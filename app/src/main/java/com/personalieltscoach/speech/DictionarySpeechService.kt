@@ -2,14 +2,25 @@ package com.personalieltscoach.speech
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Response
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
@@ -42,6 +53,9 @@ class DictionarySpeechService(
     private suspend fun prepareWithFallback(segment: String): List<File> {
         return runCatching { listOf(prepareSegment(segment)) }
             .getOrElse { originalError ->
+                if (originalError is CancellationException) throw originalError
+                // Splitting cannot repair an offline network or a timed-out socket.
+                if (originalError !is DictionarySpeechException) throw originalError
                 val halves = DictionarySpeechSegmenter.halve(segment)
                 if (halves == null) throw originalError
                 prepareWithFallback(halves.first) + prepareWithFallback(halves.second)
@@ -58,6 +72,7 @@ class DictionarySpeechService(
             if (target.isUsableAudio()) return@withLock target
             var lastError: Throwable? = null
             repeat(2) {
+                currentCoroutineContext().ensureActive()
                 runCatching { download(segment, target) }
                     .onSuccess { return@withLock it }
                     .onFailure { error -> lastError = error }
@@ -66,7 +81,7 @@ class DictionarySpeechService(
         }
     }
 
-    private fun download(segment: String, target: File): File {
+    private suspend fun download(segment: String, target: File): File {
         val url = endpoint.newBuilder()
             .addQueryParameter("audio", segment)
             .addQueryParameter("type", "1")
@@ -79,16 +94,10 @@ class DictionarySpeechService(
             .build()
         val temporary = File.createTempFile("dictionary-", ".tmp", cacheDirectory)
         try {
-            client.newCall(request).execute().use { response ->
-                val body = response.body
-                val contentType = body?.contentType()?.type
-                if (!response.isSuccessful || body == null || contentType != "audio") {
-                    throw DictionarySpeechException("词典中没有找到这段英音")
-                }
-                body.byteStream().use { input ->
-                    temporary.outputStream().use(input::copyTo)
-                }
-            }
+            val audio = fetchAudio(request)
+            currentCoroutineContext().ensureActive()
+            temporary.writeBytes(audio)
+            currentCoroutineContext().ensureActive()
             if (!temporary.isUsableAudio()) {
                 throw DictionarySpeechException("词典返回的音频无效")
             }
@@ -100,6 +109,42 @@ class DictionarySpeechService(
         } finally {
             if (temporary.exists()) temporary.delete()
         }
+    }
+
+    private suspend fun fetchAudio(request: Request): ByteArray = suspendCancellableCoroutine { continuation ->
+        val call = client.newCall(request)
+        continuation.invokeOnCancellation { call.cancel() }
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, error: IOException) {
+                if (continuation.isActive) continuation.resumeWithException(error)
+            }
+            override fun onResponse(call: Call, response: Response) {
+                try {
+                    val bytes = response.use {
+                        val body = it.body
+                        if (!it.isSuccessful || body == null || body.contentType()?.type != "audio")
+                            throw DictionarySpeechException("词典中没有找到这段英音")
+                        require(body.contentLength() <= 4L * 1024 * 1024) { "词典音频异常过大" }
+                        body.byteStream().use { input ->
+                            ByteArrayOutputStream().use { output ->
+                                val buffer = ByteArray(8192)
+                                while (true) {
+                                    if (!continuation.isActive) throw CancellationException()
+                                    val count = input.read(buffer)
+                                    if (count < 0) break
+                                    require(output.size() + count <= 4 * 1024 * 1024) { "词典音频异常过大" }
+                                    output.write(buffer, 0, count)
+                                }
+                                output.toByteArray()
+                            }
+                        }
+                    }
+                    if (continuation.isActive) continuation.resume(bytes)
+                } catch (error: Exception) {
+                    if (continuation.isActive) continuation.resumeWithException(error)
+                }
+            }
+        })
     }
 
     private fun cacheFile(segment: String): File = File(cacheDirectory, "${cacheKey(segment)}.mp3")
@@ -132,7 +177,7 @@ class DictionarySpeechService(
 }
 
 object DictionarySpeechSegmenter {
-    private val TOKEN = Regex("[A-Za-z0-9]+(?:['’][A-Za-z]+)*")
+    private val TOKEN = Regex("[A-Za-zÀ-ÖØ-öø-ÿ0-9]+(?:['’][A-Za-zÀ-ÖØ-öø-ÿ]+)*")
 
     fun split(text: String): List<String> = TOKEN.findAll(text)
         .map { it.value.replace('’', '\'') }

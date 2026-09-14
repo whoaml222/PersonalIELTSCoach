@@ -19,6 +19,8 @@ class GPTProvider(
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
+        .followRedirects(false)
+        .followSslRedirects(false)
         .build()
 ) : AIService {
 
@@ -114,13 +116,16 @@ class GPTProvider(
             .build()
 
         client.newCall(request).execute().use { response ->
-            val responseBody = response.body?.string().orEmpty()
+            val source = response.body?.source() ?: throw AIException("AI 返回空响应")
+            if (source.request(2_097_153)) throw AIException("AI 返回内容过大，请缩短输入后重试")
+            val responseBody = source.readUtf8()
             if (!response.isSuccessful) {
-                val message = runCatching {
-                    Json.parseToJsonElement(responseBody).jsonObject["error"]
-                        ?.jsonObject?.get("message")?.jsonPrimitive?.content
-                }.getOrNull()
-                throw AIException(message ?: "AI 请求失败：HTTP ${response.code}")
+                // Provider error text can echo a credential or private prompt. Never display it verbatim.
+                throw AIException(when (response.code) {
+                    401, 403 -> "AI 认证失败，请在设置中检查密钥与权限"
+                    429 -> "AI 请求额度不足或请求过于频繁，请稍后重试"
+                    else -> "AI 请求失败：HTTP ${response.code}"
+                })
             }
             extractOutputText(responseBody)
         }

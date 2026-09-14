@@ -8,6 +8,7 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.personalieltscoach.data.local.dao.*
 import com.personalieltscoach.data.local.entity.*
+import com.personalieltscoach.reading.*
 
 @Database(
     entities = [
@@ -23,9 +24,12 @@ import com.personalieltscoach.data.local.entity.*
         PlacementQuestionEntity::class,
         StudyActivityEntity::class,
         SavedSentenceEntity::class,
-        SentenceCardEntity::class
+        SentenceCardEntity::class,
+        CourseEntity::class,
+        ReadingProgressEntity::class,
+        ReadingVocabularyEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class CoachDatabase : RoomDatabase() {
@@ -37,6 +41,7 @@ abstract class CoachDatabase : RoomDatabase() {
     abstract fun writingDao(): WritingDao
     abstract fun studyDao(): StudyDao
     abstract fun sentenceCardDao(): SentenceCardDao
+    abstract fun readingDao(): ReadingDao
 
     companion object {
         fun create(context: Context): CoachDatabase =
@@ -45,9 +50,16 @@ abstract class CoachDatabase : RoomDatabase() {
                 CoachDatabase::class.java,
                 "personal_ielts_coach.db"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
-                .fallbackToDestructiveMigration()
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
+
+        internal val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS reading_courses (id TEXT NOT NULL, title TEXT NOT NULL, revision INTEGER NOT NULL, folder TEXT NOT NULL, manifest TEXT NOT NULL, importedAt INTEGER NOT NULL, PRIMARY KEY(id))")
+                database.execSQL("CREATE TABLE IF NOT EXISTS reading_progress (courseId TEXT NOT NULL, lessonId TEXT NOT NULL, sentenceIndex INTEGER NOT NULL, audioPosition INTEGER NOT NULL, completed INTEGER NOT NULL, updatedAt INTEGER NOT NULL, PRIMARY KEY(courseId, lessonId))")
+                database.execSQL("CREATE TABLE IF NOT EXISTS reading_vocabulary (id TEXT NOT NULL, word TEXT NOT NULL, meaning TEXT NOT NULL, sentence TEXT NOT NULL, courseId TEXT NOT NULL, lessonId TEXT NOT NULL, linkedWordId INTEGER, status TEXT NOT NULL, streak INTEGER NOT NULL, dueAt INTEGER NOT NULL, lastStudiedAt INTEGER NOT NULL, PRIMARY KEY(id))")
+            }
+        }
 
         internal val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {

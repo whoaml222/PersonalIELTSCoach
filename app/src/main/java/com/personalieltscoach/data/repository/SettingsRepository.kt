@@ -7,6 +7,8 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.personalieltscoach.BuildConfig
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val Context.dataStore by preferencesDataStore("coach_settings")
 
@@ -24,28 +26,40 @@ data class CoachSettings(
     val speechMode: String = "AUTO",
     val speechRate: Float = 0.92f,
     val apiKey: String = ""
-)
+) {
+    // Never include credentials in crash reports or incidental diagnostic logging.
+    override fun toString(): String = "CoachSettings(provider=$provider, model=$model, apiKey=[redacted])"
+}
 
 interface SettingsProvider {
     suspend fun current(): CoachSettings
 }
 
 class SettingsRepository(private val context: Context) : SettingsProvider {
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
-    private val encryptedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "secure_coach_settings",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
-    private val apiKey = MutableStateFlow(
-        encryptedPreferences.getString(KEY_API, "").orEmpty()
-    )
+    private val _secureStorageError = MutableStateFlow<String?>(null)
+    val secureStorageError = _secureStorageError.asStateFlow()
+    private val encryptedPreferences = try {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+        EncryptedSharedPreferences.create(context, "secure_coach_settings", masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
+    } catch (_: Exception) {
+        // Fail closed for credentials, not for the user's offline learning data.
+        // Never replace damaged ciphertext with plaintext or silently reset the key store.
+        _secureStorageError.value = STORAGE_UNAVAILABLE
+        null
+    }
+    private val apiKey = MutableStateFlow(try {
+        encryptedPreferences?.getString(KEY_API, "").orEmpty()
+    } catch (_: Exception) {
+        _secureStorageError.value = STORAGE_UNAVAILABLE
+        ""
+    })
 
-    val settings: Flow<CoachSettings> = combine(context.dataStore.data, apiKey) { prefs, key ->
+    val settings: Flow<CoachSettings> = combine(context.dataStore.data.catch { error ->
+        if (error is java.io.IOException) emit(emptyPreferences()) else throw error
+    }, apiKey) { prefs, key ->
         CoachSettings(
             provider = prefs[PROVIDER] ?: "GPT",
             model = prefs[MODEL] ?: "gpt-5.4-mini",
@@ -65,9 +79,17 @@ class SettingsRepository(private val context: Context) : SettingsProvider {
 
     override suspend fun current(): CoachSettings = settings.first()
 
-    fun saveApiKey(value: String) {
-        encryptedPreferences.edit().putString(KEY_API, value.trim()).apply()
-        apiKey.value = value.trim()
+    suspend fun saveApiKey(value: String) = withContext(Dispatchers.IO) {
+        val preferences = encryptedPreferences
+        check(preferences != null && _secureStorageError.value == null) { STORAGE_UNAVAILABLE }
+        try {
+            check(preferences.edit().putString(KEY_API, value.trim()).commit()) { "密钥未能保存，请检查存储空间。" }
+            apiKey.value = value.trim()
+        } catch (_: Exception) {
+            _secureStorageError.value = STORAGE_UNAVAILABLE
+            apiKey.value = ""
+            throw IllegalStateException(STORAGE_UNAVAILABLE)
+        }
     }
 
     suspend fun setModel(value: String) = context.dataStore.edit { it[MODEL] = value }
@@ -95,6 +117,7 @@ class SettingsRepository(private val context: Context) : SettingsProvider {
     }
 
     private companion object {
+        const val STORAGE_UNAVAILABLE = "系统安全存储暂不可用，AI 密钥功能已停用。可继续离线学习；请重启手机后重试。不会将密钥改存为明文。"
         const val KEY_API = "openai_api_key"
         val PROVIDER = stringPreferencesKey("provider")
         val MODEL = stringPreferencesKey("model")

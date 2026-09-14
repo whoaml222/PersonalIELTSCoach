@@ -43,6 +43,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     private val coach = container.coachRepository
     private val ai = container.aiRepository
     private val settingsRepository = container.settingsRepository
+    val secureStorageError = settingsRepository.secureStorageError
     private val updates = container.updateRepository
     private val updateDownloads = container.updateDownloadManager
 
@@ -186,11 +187,13 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         word: WordItemEntity,
         correct: Boolean,
         review: Boolean,
-        reloadSession: Boolean = true
+        reloadSession: Boolean = true,
+        onSaved: (Boolean) -> Unit = {}
     ) {
         viewModelScope.launch {
             runCatching { coach.answerWord(word, correct, review) }
                 .onSuccess {
+                    onSaved(true)
                     if (reloadSession) {
                         if (review) loadDueWords() else loadNewWords()
                     }
@@ -200,7 +203,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
                         "已加入错词本，明天再复习"
                     }
                 }
-                .onFailure { _message.value = it.userMessage() }
+                .onFailure { _message.value = it.userMessage(); onSaved(false) }
         }
     }
 
@@ -226,7 +229,9 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    private var paulSessionGeneration = 0L
     fun startPaulWordSession(continueAfterGoal: Boolean = false) {
+        val generation = ++paulSessionGeneration
         viewModelScope.launch {
             _sentencePackSession.value = SentencePackSessionState(
                 loading = true,
@@ -237,6 +242,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
                 cards to coach.paulWordsFor(cards)
             }
                 .onSuccess { (cards, wordsByCardId) ->
+                    if (generation != paulSessionGeneration) return@onSuccess
                     _sentencePackSession.value = SentencePackSessionState(
                         cards = cards,
                         wordsByCardId = wordsByCardId,
@@ -246,6 +252,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
                     )
                 }
                 .onFailure { error ->
+                    if (generation != paulSessionGeneration) return@onFailure
                     _sentencePackSession.value = SentencePackSessionState(
                         continuing = continueAfterGoal,
                         error = error.userMessage()
@@ -255,6 +262,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun rateCurrentPaulWord(rating: SentenceRating) {
+        val generation = paulSessionGeneration
         val state = _sentencePackSession.value
         val card = state.cards.firstOrNull() ?: return
         if (state.answering) return
@@ -262,6 +270,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             runCatching { coach.answerSentence(card, rating) }
                 .onSuccess {
+                    if (generation != paulSessionGeneration) return@onSuccess
                     val remaining = _sentencePackSession.value.cards.drop(1)
                     _sentencePackSession.value = _sentencePackSession.value.copy(
                         cards = remaining,
@@ -270,6 +279,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
                     )
                 }
                 .onFailure { error ->
+                    if (generation != paulSessionGeneration) return@onFailure
                     _sentencePackSession.value = _sentencePackSession.value.copy(
                         answering = false,
                         error = error.userMessage()
@@ -279,6 +289,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun closeSentencePackSession() {
+        paulSessionGeneration++
         _sentencePackSession.value = SentencePackSessionState()
     }
 
@@ -320,10 +331,11 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun recordReading(text: String) {
+    fun recordReading(text: String, onSaved: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            coach.recordReading(text)
-            _message.value = "本次阅读已记录"
+            runCatching { coach.recordReading(text) }
+                .onSuccess { _message.value = "本次阅读已记录"; onSaved(true) }
+                .onFailure { _message.value = "阅读记录保存失败，请重试"; onSaved(false) }
         }
     }
 
@@ -337,8 +349,13 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun saveApiKey(key: String) {
-        settingsRepository.saveApiKey(key)
-        _message.value = "API Key 已安全保存在本机"
+        viewModelScope.launch {
+            try {
+                settingsRepository.saveApiKey(key)
+                _message.value = "API Key 已安全保存在本机"
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (_: Exception) { _message.value = "密钥未保存：请检查系统安全存储和剩余空间。没有使用明文存储。" }
+        }
     }
 
     fun setModel(value: String) = viewModelScope.launch { settingsRepository.setModel(value) }

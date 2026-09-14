@@ -110,19 +110,32 @@ private fun SentenceAnalysisCard(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ReadingScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
+fun FreeReadingScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
     val readings by viewModel.readings.collectAsStateWithLifecycle()
     val aiState by viewModel.sentenceResult.collectAsStateWithLifecycle()
     var text by rememberSaveable { mutableStateOf("") }
-    var sentences by remember { mutableStateOf<List<String>>(emptyList()) }
-    var selectedSentence by remember { mutableStateOf<String?>(null) }
-    var selectedWord by remember { mutableStateOf<Pair<String, WordItemEntity?>?>(null) }
-    var readingRecorded by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    var readingStarted by rememberSaveable { mutableStateOf(false) }
+    var selectedIndex by rememberSaveable { mutableIntStateOf(-1) }
+    var readingRecorded by rememberSaveable { mutableStateOf(false) }
+    var recording by remember { mutableStateOf(false) }
+    var contentGeneration by remember { mutableIntStateOf(0) }
+    // Save the input and a small selection, not a second copy of every sentence in the Bundle.
+    val sentences = remember(text, readingStarted) {
+        if (readingStarted) TextSegmenter.sentences(text) else emptyList()
+    }
+    val selectedSentence = sentences.getOrNull(selectedIndex)
+    fun resetReading(start: Boolean) {
+        readingStarted = start
+        selectedIndex = -1
+        readingRecorded = false
+        recording = false
+        contentGeneration++
+    }
+    val reader: com.personalieltscoach.reading.ReaderViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val speech = rememberSpeechController()
 
     CoachScaffold("阅读器", onBack) {
-        Text("粘贴文章后先在本地分句。只有你点中的句子才会调用 AI。")
+        Text("分句和点词解释均在本地完成。只有点击‘AI 拆解’才会发送选中的句子并产生 API 费用。")
         if (readings.isNotEmpty()) {
             Text("示例短文", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -130,8 +143,7 @@ fun ReadingScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                     SuggestionChip(
                         onClick = {
                             text = reading.content
-                            sentences = TextSegmenter.sentences(reading.content)
-                            readingRecorded = false
+                            resetReading(start = true)
                         },
                         label = { Text(reading.title) }
                     )
@@ -141,19 +153,15 @@ fun ReadingScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
         OutlinedTextField(
             value = text,
             onValueChange = {
-                text = it
-                sentences = emptyList()
-                selectedSentence = null
-                readingRecorded = false
+                text = it.take(30_000)
+                resetReading(start = false)
             },
             label = { Text("英文文章") },
             minLines = 6,
             modifier = Modifier.fillMaxWidth()
         )
         PrimaryButton("按句子开始阅读", enabled = text.isNotBlank()) {
-            sentences = TextSegmenter.sentences(text)
-            selectedSentence = null
-            readingRecorded = false
+            if (!readingStarted) resetReading(start = true)
         }
         if (sentences.isNotEmpty()) {
             Text(
@@ -162,10 +170,17 @@ fun ReadingScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
             )
             OutlinedButton(
                 onClick = {
-                    viewModel.recordReading(text)
-                    readingRecorded = true
+                    recording = true
+                    val generation = contentGeneration
+                    viewModel.recordReading(text) { saved ->
+                        // A slow save for the previous article must not mark a new article completed.
+                        if (generation == contentGeneration) {
+                            recording = false
+                            readingRecorded = saved
+                        }
+                    }
                 },
-                enabled = !readingRecorded,
+                enabled = !readingRecorded && !recording,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(if (readingRecorded) "本次阅读已记录" else "完成阅读并记录")
@@ -173,10 +188,10 @@ fun ReadingScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
         }
         sentences.forEachIndexed { index, item ->
             ElevatedCard(
-                onClick = { selectedSentence = item },
+                onClick = { selectedIndex = index },
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.elevatedCardColors(
-                    containerColor = if (selectedSentence == item) MaterialTheme.colorScheme.primaryContainer
+                    containerColor = if (selectedIndex == index) MaterialTheme.colorScheme.primaryContainer
                     else MaterialTheme.colorScheme.surface
                 )
             ) {
@@ -189,22 +204,9 @@ fun ReadingScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                     text = selected,
                     speech = speech,
                     style = MaterialTheme.typography.titleMedium,
-                    showHint = true
+                    showHint = true,
+                    onCollect = { reader.collect("free-reading", "saved-sentence", it.lemma, it.meaning, selected) }
                 )
-                Text("点击下方单词可发音并查看本地词义：")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TextSegmenter.words(selected).forEach { word ->
-                        AssistChip(
-                            onClick = {
-                                speech.speak(word)
-                                scope.launch {
-                                    selectedWord = word to viewModel.findWord(word)
-                                }
-                            },
-                            label = { Text(word) }
-                        )
-                    }
-                }
                 Button(
                     onClick = {
                         viewModel.analyzeSentence(selected)
@@ -231,42 +233,6 @@ fun ReadingScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
         }
     }
 
-    selectedWord?.let { (raw, found) ->
-        AlertDialog(
-            onDismissRequest = { selectedWord = null },
-            title = { Text(raw) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (found != null) {
-                        Text(found.phonetic)
-                        Text(WordPresentation.meaningWithChineseType(found.meaning))
-                        if (found.example.isNotBlank()) {
-                            SpokenEnglishText(
-                                text = found.example,
-                                speech = speech,
-                                showHint = true
-                            )
-                        }
-                    } else {
-                        Text("本地词库暂无释义，可以先加入单词本，之后补充学习。")
-                    }
-                }
-            },
-            confirmButton = {
-                if (found == null) {
-                    TextButton(onClick = {
-                        viewModel.addUnknownWord(raw)
-                        selectedWord = null
-                    }) { Text("加入单词本") }
-                } else {
-                    TextButton(onClick = { selectedWord = null }) { Text("知道了") }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { speech.speak(raw) }) { Text("朗读单词") }
-            }
-        )
-    }
 }
 
 @Composable

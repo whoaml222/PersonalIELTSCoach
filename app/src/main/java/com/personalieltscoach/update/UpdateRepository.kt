@@ -29,7 +29,9 @@ class UpdateRepository(
             .header("User-Agent", "PersonalIELTSCoach/${BuildConfig.VERSION_NAME}")
             .build()
         client.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
+            val source = response.body?.source() ?: throw IOException("更新服务返回空响应")
+            if (source.request(1_048_577)) throw IOException("更新信息过大，已停止读取")
+            val body = source.readUtf8()
             if (response.code == 404) {
                 throw IOException("仓库中还没有已发布的 Release")
             }
@@ -39,6 +41,9 @@ class UpdateRepository(
             val release = json.decodeFromString<GitHubRelease>(body)
             if (release.draft || release.prerelease) return@withContext null
             val version = release.tagName.removePrefix("v").removePrefix("V")
+            if (!Regex("[0-9]{1,6}(?:\\.[0-9]{1,6}){1,3}").matches(version)) {
+                throw IOException("更新版本号格式无效")
+            }
             if (!VersionComparator.isNewer(version, BuildConfig.VERSION_NAME)) {
                 return@withContext null
             }
@@ -73,4 +78,3 @@ class UpdateRepository(
             Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
     }
 }
-

@@ -5,6 +5,8 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Visibility
@@ -12,6 +14,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -19,6 +22,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.personalieltscoach.ui.CoachViewModel
 import com.personalieltscoach.ui.component.*
 import com.personalieltscoach.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +35,7 @@ fun SettingsScreen(
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val usage by viewModel.todayUsage.collectAsStateWithLifecycle()
     val connection by viewModel.connectionState.collectAsStateWithLifecycle()
+    val secureStorageError by viewModel.secureStorageError.collectAsStateWithLifecycle()
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
     var apiKey by remember(settings.apiKey) { mutableStateOf(settings.apiKey) }
     var updateRepository by remember(settings.updateRepository) {
@@ -41,6 +47,14 @@ fun SettingsScreen(
     var showKey by remember { mutableStateOf(false) }
     var modelMenu by remember { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
+    var showLicenses by remember { mutableStateOf(false) }
+    var licenseText by remember { mutableStateOf("") }
+    val application = LocalContext.current.applicationContext
+    LaunchedEffect(showLicenses) {
+        if (showLicenses && licenseText.isEmpty()) licenseText = withContext(Dispatchers.IO) {
+            application.assets.open("ECDICT-LICENSE.txt").bufferedReader().use { it.readText() }
+        }
+    }
     var speechRate by remember(settings.speechRate) { mutableFloatStateOf(settings.speechRate) }
     val models = listOf("gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.4")
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -97,16 +111,21 @@ fun SettingsScreen(
             )
             Text(
                 "不再使用手机系统朗读。首次播放需要联网，成功播放后会保存在 APP 缓存中，" +
-                    "以后可离线重听；不调用 OpenAI、不需要 API Key，也不产生 Token 费用。",
+                    "以后可离线重听；不调用 OpenAI、不需要 API Key，也不产生 Token 费用。" +
+                    "未缓存的发音会将所点单词或句子发送给有道词典（dict.youdao.com）；服务方也会收到网络 IP。" +
+                    "不要朗读包含密码、身份号码等敏感信息的文本。缓存可能被系统清理；个人课程原音频保存在应用文件中。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         SectionCard("AI 设置") {
+            secureStorageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            Text("可选付费功能：只有手动点 AI 分析、写作批改或测试连接才会请求 OpenAI。所选文本会发送到该服务，不会发送整份课程或学习数据库。", style = MaterialTheme.typography.bodySmall)
             Text("平台：GPT（其他平台预留，暂未启用）")
             OutlinedTextField(
                 value = apiKey,
+                enabled = secureStorageError == null,
                 onValueChange = { apiKey = it },
                 label = { Text("OpenAI API Key") },
                 visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
@@ -127,6 +146,7 @@ fun SettingsScreen(
             )
             OutlinedButton(
                 onClick = { viewModel.saveApiKey(apiKey) },
+                enabled = secureStorageError == null,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("保存 API Key") }
 
@@ -232,6 +252,8 @@ fun SettingsScreen(
         }
 
         SectionCard("数据设置") {
+            Text("离线点词词典含 ECDICT 常用词条。语法提示在本机读取，不产生 API Token 费用。", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { showLicenses = true }) { Text("离线词典来源与开源许可") }
             OutlinedButton(
                 onClick = { confirmReset = true },
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
@@ -241,11 +263,16 @@ fun SettingsScreen(
         }
     }
 
+    if (showLicenses) AlertDialog(onDismissRequest = { showLicenses = false },
+        title = { Text("离线词典开源许可") },
+        text = { Text(licenseText.ifBlank { "正在读取…" }, modifier = Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) },
+        confirmButton = { TextButton(onClick = { showLicenses = false }) { Text("关闭") } })
+
     if (confirmReset) {
         AlertDialog(
             onDismissRequest = { confirmReset = false },
             title = { Text("清空学习数据？") },
-            text = { Text("水平测试、单词进度、错词、写作和报告都会被清空。此操作无法撤销。") },
+            text = { Text("水平测试、单词进度、错词、写作、报告、阅读位置和阅读生词都会被清空。导入的课程正文和原音频会保留。此操作无法撤销。") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmReset = false

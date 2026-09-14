@@ -13,7 +13,7 @@ import com.personalieltscoach.worker.UpdateCheckWorker
 import kotlinx.serialization.json.Json
 import java.util.concurrent.TimeUnit
 
-class CoachApplication : Application() {
+open class CoachApplication : Application() {
     lateinit var container: AppContainer
         private set
 
@@ -53,6 +53,7 @@ class AppContainer(val application: Application) {
     val database = CoachDatabase.create(application)
     val settingsRepository = SettingsRepository(application)
     val coachRepository = CoachRepository(database, settingsRepository, json)
+    val readingRepository = com.personalieltscoach.reading.ReadingRepository(application, database, coachRepository, json)
     val aiRepository = AiRepository(database, settingsRepository, json)
     val updateRepository = UpdateRepository(json)
     val updateDownloadManager = UpdateDownloadManager(application)
