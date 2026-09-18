@@ -158,12 +158,15 @@ class CoachRepository(
                 targetCount = PAUL_WORD_DAILY_GOAL,
                 completed = paulWordTask.completedCount >= PAUL_WORD_DAILY_GOAL
             )
-            if (updatedNewWordTask != newWordTask || updatedPaulWordTask != paulWordTask) {
+            val retiredWritingTask = database.planDao().getTask(date, "WRITING")
+            if (updatedNewWordTask != newWordTask || updatedPaulWordTask != paulWordTask ||
+                retiredWritingTask != null || existingPlan.totalCount != 4) {
                 database.withTransaction {
+                    database.planDao().removeRetiredWritingTask(date)
                     updatedNewWordTask?.let { database.planDao().upsertTask(it) }
                     updatedPaulWordTask?.let { database.planDao().upsertTask(it) }
-                    val completedTasks = database.planDao().getTasks(date).count { it.completed }
-                    database.planDao().upsertPlan(existingPlan.copy(completedCount = completedTasks))
+                    val tasks = database.planDao().getTasks(date)
+                    database.planDao().upsertPlan(existingPlan.copy(completedCount = tasks.count { it.completed }, totalCount = tasks.size))
                 }
             }
             return
@@ -171,27 +174,27 @@ class CoachRepository(
         val settings = settingsRepository.current()
         val a1Plus = profile.currentLevel != "A0-A1"
         val reviewTarget = if (a1Plus) maxOf(settings.dailyReviewWords, 30) else settings.dailyReviewWords
-        val writingTarget = if (a1Plus) 5 else 3
         val now = System.currentTimeMillis()
         val tasks = listOf(
             StudyTaskEntity(date = date, type = "VOCAB_REVIEW", title = "复习旧单词", description = "$reviewTarget 个到期词：Paul1000与新概念各半", targetCount = reviewTarget),
             StudyTaskEntity(date = date, type = "VOCAB_NEW", title = "学习新单词", description = "$NEW_WORD_DAILY_GOAL 个新概念英语1词汇，完成后可继续", targetCount = NEW_WORD_DAILY_GOAL),
             StudyTaskEntity(date = date, type = "SENTENCE_STUDY", title = "Paul1000单词", description = "$PAUL_WORD_DAILY_GOAL 个高频词和真实口语例句，完成后可继续", targetCount = PAUL_WORD_DAILY_GOAL),
-            StudyTaskEntity(date = date, type = "READING", title = "阅读短文", description = if (a1Plus) "阅读 100-200 词" else "阅读 50-100 词", targetCount = 1),
-            StudyTaskEntity(date = date, type = "WRITING", title = "写作练习", description = "$writingTarget 个简单句", targetCount = writingTarget)
+            StudyTaskEntity(date = date, type = "READING", title = "阅读短文", description = if (a1Plus) "阅读 100-200 词" else "阅读 50-100 词", targetCount = 1)
         )
         database.withTransaction {
+            database.planDao().removeRetiredWritingTask(date)
+            database.planDao().insertTasks(tasks)
+            val savedTasks = database.planDao().getTasks(date)
             database.planDao().upsertPlan(
                 DailyPlanEntity(
                     id = existingPlan?.id ?: 0,
                     date = date,
                     level = profile.currentLevel,
-                    completedCount = existingPlan?.completedCount ?: 0,
-                    totalCount = tasks.size,
+                    completedCount = savedTasks.count { it.completed },
+                    totalCount = savedTasks.size,
                     createdAt = existingPlan?.createdAt ?: now
                 )
             )
-            database.planDao().insertTasks(tasks)
         }
     }
 

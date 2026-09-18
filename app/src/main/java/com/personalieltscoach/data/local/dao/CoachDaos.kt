@@ -170,6 +170,10 @@ interface PlanDao {
     @Upsert
     suspend fun upsertTask(task: StudyTaskEntity)
 
+    // Retire a plan requirement, not the user's writing or study records.
+    @Query("DELETE FROM study_tasks WHERE date = :date AND type = 'WRITING'")
+    suspend fun removeRetiredWritingTask(date: String)
+
     @Query("DELETE FROM daily_plans")
     suspend fun clearPlans()
 

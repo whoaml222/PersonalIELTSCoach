@@ -58,12 +58,29 @@ class ReadingRepository(private val context: Context, private val db: CoachDatab
             val course = input.use { CoursePackageReader(json).extract(it, stage) }
             val previous = dao.course(course.id)
             require(previous == null || course.revision >= previous.revision) { "不能用旧课程覆盖新内容" }
+            val previousCourse = previous?.let {
+                try { loadCourse(it) }
+                catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                // A valid reimport is also the recovery path for damaged/missing files.
+                // Keep numeric progress if the previous manifest cannot be loaded.
+                catch (_: Exception) { null }
+            }
             db.withTransaction {
                 dao.putCourse(CourseEntity(course.id, course.title, course.revision, stage.name,
                     // Large annotated courses exceed Android's CursorWindow row limit.
                     // Keep only a tiny outline in Room; the validated private JSON stays on disk.
                     json.encodeToString(CourseOutline(course.lessons.size, course.lessons.count { it.ready })), System.currentTimeMillis()))
-                // Content replacement deliberately does not replace learning progress.
+                // Splitting an old paragraph into sentences changes array indices, not
+                // stable sentence ids. Keep the learner at the same original sentence.
+                previousCourse?.lessons?.forEach { oldLesson ->
+                    val saved = dao.progress(course.id, oldLesson.id) ?: return@forEach
+                    val updated = course.lessons.firstOrNull { it.id == oldLesson.id } ?: return@forEach
+                    val oldId = oldLesson.sentences.getOrNull(saved.sentenceIndex)?.id
+                    val mapped = updated.sentences.indexOfFirst { it.id == oldId }
+                    val index = if (saved.completed) updated.sentences.lastIndex.coerceAtLeast(0)
+                        else if (mapped >= 0) mapped else saved.sentenceIndex.coerceIn(0, updated.sentences.lastIndex.coerceAtLeast(0))
+                    if (index != saved.sentenceIndex) dao.putProgress(saved.copy(sentenceIndex = index))
+                }
             }
             committed = true
             previous?.folder?.let { folder ->

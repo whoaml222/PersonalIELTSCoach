@@ -164,8 +164,10 @@ private fun LessonReader(reader: ReaderViewModel, course: CourseEntity, lesson: 
                     if (translation && sentence.translation.isNotBlank()) Text(sentence.translation, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 TextButton(onClick = { translation = !translation }) { Text(if (translation) "隐藏中文" else "查看中文参考") }
-                if (translation && (full || lesson.sentences[index].translation.isBlank())) {
-                    Text(if (lesson.translation.isNotBlank()) "全文参考：\n${lesson.translation}" else "这一段暂没有校对后的中文。先点词查看已有释义。")
+                if (translation && full && lesson.sentences.none { it.translation.isNotBlank() }) {
+                    Text(if (lesson.translation.isNotBlank()) "全文参考：\n${lesson.translation}" else "本篇暂没有校对后的中文。")
+                } else if (translation && !full && lesson.sentences[index].translation.isBlank()) {
+                    Text("本句中文待补充。请导入含逐句中文的新版课程包；全文参考只在‘全文阅读’中显示。")
                 }
                 if (!full) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     OutlinedButton(onClick = { speech.stop(); index-- }, enabled = index > 0) { Text("上一句") }

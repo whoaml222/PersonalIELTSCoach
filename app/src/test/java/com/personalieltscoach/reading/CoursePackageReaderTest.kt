@@ -74,5 +74,30 @@ class CoursePackageReaderTest {
         assertEquals(103, course.lessons.count { it.ready })
         assertEquals(102, course.lessons.count { it.audio != null })
         assertTrue(course.lessons.filter { it.ready }.all { it.translation.isNotBlank() && it.sentences.all { s -> s.grammar.isNotEmpty() } })
+        if (course.revision >= 2) {
+            assertEquals(825, course.lessons.sumOf { it.sentences.size })
+            assertTrue(course.lessons.flatMap { it.sentences }.all { sentence ->
+                sentence.translation.isNotBlank() && sentence.grammar.all { it.syntax.isNotEmpty() }
+            })
+            val qingming = course.lessons.single { it.id == "d002" }
+            assertTrue(qingming.sentences.size > 3)
+            assertTrue(qingming.sentences.all { it.translation != qingming.translation })
+        }
+    }
+
+    @Test fun rejectsSyntaxOutsideWordAndInvalidHeadsWhileAcceptingOldMetadata() {
+        val item = manifest().lessons.single()
+        val token = com.personalieltscoach.domain.service.GrammarToken(0, 4, "this", "主语")
+        fun validate(part: com.personalieltscoach.domain.service.SyntaxToken?) {
+            val annotated = item.sentences.single().copy(grammar = listOf(token.copy(syntax = listOfNotNull(part))))
+            reader.validate(manifest(item.copy(sentences = listOf(annotated))), setOf("course.json"))
+        }
+        validate(null)
+        val valid = com.personalieltscoach.domain.service.SyntaxToken(0, 4, "this", "DET", "DT", "det", 5)
+        validate(valid)
+        listOf(valid.copy(start = -1), valid.copy(end = 5), valid.copy(head = -1),
+            valid.copy(head = 9999), valid.copy(dependency = "x".repeat(31))).forEach {
+            assertThrows(IllegalArgumentException::class.java) { validate(it) }
+        }
     }
 }

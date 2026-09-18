@@ -73,6 +73,35 @@ class ReadingRepositoryTest {
         assertEquals(once, repository.vocabulary.first().single())
         assertEquals(1, once.streak)
     }
+    @Test fun splitSentenceReimportMapsStableIdsAndKeepsAudioCompletionAndVocabulary() = runTest {
+        val course = ReadingCourse(id = "split-test", title = "Test", lessons = listOf(lesson, lesson.copy(id = "d002", order = 2)))
+        repository.importCourse(register(course))
+        repository.savePosition(course.id, "d001", sentence = 1, audio = 12345)
+        repository.complete(course.id, course.lessons[1])
+        repository.collect(course.id, "d001", "blunt", "钝的", lesson.sentences[0].text)
+        val vocabulary = repository.vocabulary.first()
+        val oldProgress = requireNotNull(db.readingDao().progress(course.id, "d001"))
+        val updated = course.copy(revision = 2, lessons = course.lessons.map {
+            it.copy(sentences = listOf(it.sentences[0], ReadingSentence("s001-part2", "It won't cut bread.", "它切不动面包。"), it.sentences[1]))
+        })
+        repository.importCourse(register(updated))
+        assertEquals(oldProgress.copy(sentenceIndex = 2), db.readingDao().progress(course.id, "d001"))
+        assertEquals(2, db.readingDao().progress(course.id, "d002")?.sentenceIndex)
+        assertTrue(requireNotNull(db.readingDao().progress(course.id, "d002")).completed)
+        assertEquals(vocabulary, repository.vocabulary.first())
+    }
+    @Test fun reimportRecoversMissingOldManifestWithoutLosingProgress() = runTest {
+        val course = ReadingCourse(id = "recovery", title = "Test", lessons = listOf(lesson))
+        repository.importCourse(register(course))
+        repository.savePosition(course.id, lesson.id, sentence = 1, audio = 1000)
+        val old = requireNotNull(db.readingDao().course(course.id))
+        val manifest = java.io.File(context.filesDir, "reading_courses/${old.folder}/course.json")
+        assertTrue(manifest.delete())
+        repository.importCourse(register(course.copy(revision = 2)))
+        assertEquals(1, db.readingDao().progress(course.id, lesson.id)?.sentenceIndex)
+        assertEquals(1000, db.readingDao().progress(course.id, lesson.id)?.audioPosition)
+        assertEquals(2, repository.loadCourse(requireNotNull(db.readingDao().course(course.id))).revision)
+    }
     @Test fun sameSenseTracksOriginalProgressButDifferentSensesStaySeparate() = runTest {
         val id = db.wordDao().insert(WordItemEntity(word = "light", meaning = "轻的", phonetic = "/laɪt/",
             example = "This bag is light.", exampleTranslation = "这个包很轻。", level = "A1", createdAt = 1, updatedAt = 1))

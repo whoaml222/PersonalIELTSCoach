@@ -17,6 +17,11 @@ class OfflineAssetsTest {
             val spans = ContextDictionary.tokens.findAll(sentence).map { it.range.first to it.range.last + 1 }.toSet()
             assertEquals("Token coverage: $sentence", spans, annotations.map { it.start to it.end }.toSet())
             assertTrue(annotations.all { it.explanation.isNotBlank() })
+            annotations.forEach { word ->
+                assertTrue("Missing syntax: $sentence / ${word.lemma}", word.syntax.isNotEmpty())
+                assertTrue("Invalid syntax span: $sentence / ${word.lemma}", word.syntax.all { it.start >= word.start && it.end <= word.end &&
+                    it.end > it.start && it.head in sentence.indices })
+            }
         }
     }
     @Test fun supplementalDictionaryHasLicenseAndNoEscapedLayoutNoise() {

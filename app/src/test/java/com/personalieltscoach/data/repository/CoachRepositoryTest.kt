@@ -260,7 +260,7 @@ class CoachRepositoryTest {
     }
 
     @Test
-    fun writingProgressCountsSentencesAndDeduplicatesSubmission() = runTest {
+    fun retiredWritingHistoryRemainsDeduplicatedButDoesNotCreateDailyTask() = runTest {
         repository.initializeIfNeeded()
         repository.savePlacement(
             PlacementResult("A0-A1", 300, "词汇", "基础路线")
@@ -270,10 +270,7 @@ class CoachRepositoryTest {
         repository.recordWriting("写三句话", writing)
         repository.recordWriting("写三句话", writing)
 
-        assertEquals(
-            3,
-            database.planDao().getTask(CoachRepository.today(), "WRITING")?.completedCount
-        )
+        assertEquals(null, database.planDao().getTask(CoachRepository.today(), "WRITING"))
         assertEquals(3, repository.todayTotals().first().first { it.type == "WRITING" }.amount)
     }
 
@@ -311,6 +308,33 @@ class CoachRepositoryTest {
             (31..60).map { "paul-${it.toString().padStart(4, '0')}" },
             next.map { it.id }
         )
+    }
+
+    @Test fun oldFiveTaskPlanRetiresWritingWithoutResettingCompletedLearning() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val date = CoachRepository.today()
+        database.planDao().getTasks(date).forEach {
+            database.planDao().upsertTask(it.copy(completedCount = it.targetCount, completed = true))
+        }
+        database.planDao().insertTasks(listOf(com.personalieltscoach.data.local.entity.StudyTaskEntity(
+            date = date, type = "WRITING", title = "写作练习", description = "5 个句子", targetCount = 5)))
+        val old = requireNotNull(database.planDao().getPlan(date))
+        database.planDao().upsertPlan(old.copy(totalCount = 5, completedCount = 4))
+        repository.recordWriting("历史练习", "I work here.")
+        val records = repository.todayTotals().first()
+
+        repeat(2) { repository.ensureTodayPlan() }
+        repository.ensureTodayPlan(force = true)
+
+        val tasks = database.planDao().getTasks(date)
+        assertEquals(setOf("VOCAB_NEW", "VOCAB_REVIEW", "SENTENCE_STUDY", "READING"), tasks.map { it.type }.toSet())
+        assertEquals(30, tasks.single { it.type == "SENTENCE_STUDY" }.completedCount)
+        assertEquals(20, tasks.single { it.type == "VOCAB_NEW" }.completedCount)
+        assertTrue(tasks.all { it.completed })
+        assertEquals(4, database.planDao().getPlan(date)?.completedCount)
+        assertEquals(4, database.planDao().getPlan(date)?.totalCount)
+        assertEquals(records, repository.todayTotals().first())
     }
 
     companion object {

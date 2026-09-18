@@ -48,7 +48,7 @@ fun OnboardingScreen(onStart: () -> Unit) {
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            "从零基础开始，每天自动安排单词、句子、阅读和写作，逐步走向 IELTS 7.0。",
+            "从基础词汇开始，每天学习和复习单词，在短文中理解句子结构，逐步提升英语阅读能力。",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center
         )

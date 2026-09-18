@@ -12,6 +12,8 @@ import com.personalieltscoach.domain.service.ContextDictionary
 import com.personalieltscoach.domain.service.WordContext
 import com.personalieltscoach.domain.service.ContextGrammar
 import com.personalieltscoach.domain.service.GrammarToken
+import com.personalieltscoach.domain.service.SentenceGrammarGuide
+import com.personalieltscoach.domain.service.SentenceGuide
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,14 +26,26 @@ fun WordContextSheet(sentence: String, offset: Int, speech: SpeechController,
                      onCollect: ((WordContext) -> Unit)? = null) {
     val application = LocalContext.current.applicationContext
     var context by remember(sentence, offset, contextualMeaning, grammar) { mutableStateOf<WordContext?>(null) }
+    var guide by remember(sentence, grammar) { mutableStateOf<SentenceGuide?>(null) }
+    var wordDetails by remember(sentence, offset) { mutableStateOf(false) }
     LaunchedEffect(sentence, offset, contextualMeaning, grammar) {
+        // Core meanings/word audio are useful immediately. Do not hold the entire
+        // sheet behind a cold load of both large supplementary assets.
+        context = withContext(Dispatchers.Default) {
+            ContextDictionary.explain(sentence, offset, contextualMeaning, grammar)
+        }
         val annotations = if (grammar.isNotEmpty()) grammar else try { ContextGrammar.lookup(application, sentence) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { emptyList() }
         val lexicon = try { ContextGrammar.dictionary(application) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { emptyMap() }
-        context = withContext(Dispatchers.Default) { ContextDictionary.explain(sentence, offset, contextualMeaning, annotations, lexicon) }
+        val result = withContext(Dispatchers.Default) {
+            ContextDictionary.explain(sentence, offset, contextualMeaning, annotations, lexicon) to
+                SentenceGrammarGuide.explain(sentence, annotations)
+        }
+        guide = result.second
+        context = result.first
     }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -53,7 +67,29 @@ fun WordContextSheet(sentence: String, offset: Int, speech: SpeechController,
                 HorizontalDivider()
                 Text(sentence, style = MaterialTheme.typography.bodyLarge)
                 Text("为什么这样用", style = MaterialTheme.typography.titleMedium)
-                Text(entry.explanation)
+                if (guide == null) Text("正在加载离线句型说明…", style = MaterialTheme.typography.bodySmall)
+                guide?.let { explanation ->
+                    Text("整句时态与结构", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    explanation.clauses.forEachIndexed { index, clause ->
+                        var expanded by remember(sentence, index) { mutableStateOf(index == 0) }
+                        Text("${clause.label} · ${clause.tense}", style = MaterialTheme.typography.titleSmall)
+                        Text(clause.structure)
+                        TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "收起这一部分" else "展开这一部分") }
+                        if (expanded) {
+                            Text("组成方式：${clause.formation}")
+                            Text(clause.meaning)
+                            Text("本句哪些词发生了变化", style = MaterialTheme.typography.labelLarge)
+                            Text(clause.changes)
+                            Text("换个句子也能读", style = MaterialTheme.typography.labelLarge)
+                            Text(clause.comparison)
+                        }
+                    }
+                    explanation.phrases.forEach { Text(it) }
+                    if (explanation.limitation.isNotBlank()) Text(explanation.limitation,
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                TextButton(onClick = { wordDetails = !wordDetails }) { Text(if (wordDetails) "收起单词作用" else "查看 ${entry.word} 在句中的作用") }
+                if (wordDetails) Text(entry.explanation)
                 if (onCollect != null && !entry.meaning.startsWith("本地词库暂无")) {
                     OutlinedButton(onClick = { onCollect(entry) }) { Text("收藏到阅读生词") }
                 }

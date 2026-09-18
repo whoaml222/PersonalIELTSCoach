@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -143,9 +142,7 @@ fun HomeScreen(viewModel: CoachViewModel, navigate: (String) -> Unit) {
         val buttons = listOf(
             Triple("Paul1000单词", Icons.Default.Bolt, Routes.SentencePack),
             Triple("单词复习", Icons.Default.Refresh, Routes.Review),
-            Triple("句子精读", Icons.AutoMirrored.Filled.MenuBook, Routes.Sentence),
             Triple("阅读器", Icons.AutoMirrored.Filled.Article, Routes.Reading),
-            Triple("写作练习", Icons.Default.Edit, Routes.Writing),
             Triple("错词本", Icons.Default.ErrorOutline, Routes.WrongWords),
             Triple("学习报告", Icons.Default.Insights, Routes.Progress)
         )
@@ -227,7 +224,6 @@ fun ProgressScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
             StatRow("错词", "${stats.wrongWords} 个")
             StatRow("口语例句", "${stats.sentences} 条")
             StatRow("阅读字数", "${stats.readingWords}")
-            StatRow("写作句子", "${stats.writingSentences} 个")
         }
         SectionCard("累计数据") {
             StatRow("已掌握单词", "$mastered 个")
@@ -240,7 +236,7 @@ fun ProgressScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
             val suggestion = when {
                 stats.wrongWords >= 5 -> "今天错词较多，明天先复习错词，再学习新词。"
                 (plan?.completedCount ?: 0) < (plan?.totalCount ?: 1) -> "明天优先补齐今天未完成的学习类型，保持节奏比一次学很多更重要。"
-                else -> "今天完成得很好。明天保持同样节奏，并尝试用新词写 3 个简单句。"
+                else -> "今天完成得很好。明天保持同样节奏，读一小篇短文，试着自己找出主语、动词和时间线索。"
             }
             Text(suggestion)
         }

@@ -9,7 +9,11 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable data class GrammarToken(val start: Int, val end: Int, val lemma: String,
-                                     val explanation: String)
+                                     val explanation: String,
+                                     val syntax: List<SyntaxToken> = emptyList())
+/** UTF-16 spans; contractions may have more than one syntactic part. */
+@Serializable data class SyntaxToken(val start: Int, val end: Int, val lemma: String,
+    val pos: String, val tag: String, val dependency: String, val head: Int)
 @Serializable data class LocalDefinition(val word: String, val meaning: String, val phonetic: String = "")
 
 /** Static annotations prepared offline; never sends a learner's sentence anywhere. */

@@ -12,6 +12,7 @@ import com.personalieltscoach.ui.component.SpokenEnglishText
 import com.personalieltscoach.ui.component.rememberSpeechController
 import com.personalieltscoach.ui.screen.ReadingScreen
 import com.personalieltscoach.ui.screen.FreeReadingScreen
+import com.personalieltscoach.ui.screen.HomeScreen
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Rule
 import org.junit.rules.ExternalResource
@@ -118,11 +119,48 @@ class ReaderUiTest {
         compose.onNodeWithText("导入个人课程包").assertExists()
     }
 
+    @Test fun homeRemovesRetiredModulesButKeepsPaulAndReader() {
+        val coach = coach()
+        runBlocking { (compose.activity.application as CoachApplication).container.coachRepository
+            .savePlacement(com.personalieltscoach.domain.model.PlacementResult("A0-A1", 300, "词汇", "基础路线")) }
+        compose.setContent { MaterialTheme { HomeScreen(coach) {} } }
+        awaitText("完成 0 / 4 项学习任务")
+        compose.onNodeWithText("句子精读").assertDoesNotExist()
+        compose.onNodeWithText("写作练习", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Paul1000单词").assertExists()
+        compose.onNodeWithText("阅读器").performScrollTo().assertIsDisplayed()
+    }
+
+    private fun retiredRouteReturnsHome(route: String) {
+        val coach = coach()
+        compose.setContent { MaterialTheme { com.personalieltscoach.ui.navigation.CoachApp(coach, route) } }
+        awaitText("今日学习")
+        compose.onNodeWithText("句子精读").assertDoesNotExist()
+        compose.onNodeWithText("写作练习", substring = true).assertDoesNotExist()
+    }
+
+    @Test fun retiredWritingDestinationRedirectsHome() = retiredRouteReturnsHome("writing")
+    @Test fun retiredSentenceDestinationRedirectsHome() = retiredRouteReturnsHome("sentence")
+
+    @Test fun heartWordSheetExplainsCompletePastContinuousStructure() {
+        val sentence = "My heart was racing before the interview."
+        compose.setContent { MaterialTheme { SpokenEnglishText(sentence, rememberSpeechController()) } }
+        val action = compose.onNodeWithText(sentence).fetchSemanticsNode().config[SemanticsActions.CustomActions]
+            .single { it.label == "查词 was" }
+        compose.runOnIdle { check(action.action()) }
+        awaitText("整句时态与结构")
+        compose.onNodeWithText("主句 · 过去进行时").assertExists()
+        compose.onNodeWithText("My heart［主语］ + was racing［谓语动词组］").assertExists()
+        compose.onNodeWithText("race → racing", substring = true).assertExists()
+        compose.onNodeWithText("不是状语从句", substring = true).assertExists()
+        compose.onNodeWithText("回到句子").performClick()
+    }
+
     @Test fun importedCourseOpensAndResumesTheSavedSentence() {
         val app = ApplicationProvider.getApplicationContext<CoachApplication>()
         val course = ReadingCourse(id = "ui-course", title = "测试阅读课", lessons = listOf(
-            ReadingLesson("d001", "在厨房", 1, listOf(ReadingSentence("s001", "This knife is blunt."),
-                ReadingSentence("s002", "Let's use another one.")), translation = "这把刀钝了。换一把吧。")))
+            ReadingLesson("d001", "在厨房", 1, listOf(ReadingSentence("s001", "This knife is blunt.", "这把刀钝了。"),
+                ReadingSentence("s002", "Let's use another one.", "换一把吧。")), translation = "这把刀钝了。换一把吧。")))
         val bytes = ByteArrayOutputStream().also { output ->
             ZipOutputStream(output).use { zip ->
                 zip.putNextEntry(ZipEntry("course.json")); zip.write(Json.encodeToString(course).toByteArray()); zip.closeEntry()
@@ -142,7 +180,15 @@ class ReaderUiTest {
         awaitText("开始阅读")
         compose.onNodeWithText("开始阅读").performClick()
         compose.onNodeWithText("第 1 / 2 句").assertExists()
+        compose.onNodeWithText("查看中文参考").performScrollTo().performClick()
+        compose.onNodeWithText("这把刀钝了。").assertExists()
+        compose.onNodeWithText("换一把吧。").assertDoesNotExist()
+        compose.onNodeWithText("全文参考：", substring = true).assertDoesNotExist()
         compose.onNodeWithText("下一句").performScrollTo().performClick()
+        compose.onNodeWithText("这把刀钝了。").assertDoesNotExist()
+        compose.onNodeWithText("换一把吧。").assertDoesNotExist()
+        compose.onNodeWithText("查看中文参考").performScrollTo().performClick()
+        compose.onNodeWithText("换一把吧。").assertExists()
         compose.waitUntil(10_000) {
             runBlocking { app.container.database.readingDao().progress("ui-course", "d001")?.sentenceIndex == 1 }
         }
@@ -151,6 +197,34 @@ class ReaderUiTest {
         compose.onNodeWithText("开始阅读").performClick()
         compose.onNodeWithText("第 2 / 2 句").assertExists()
         compose.onNodeWithText("Let's use another one.").assertExists()
+    }
+
+    @Test fun legacyArticleTranslationNeverAppearsAsCurrentSentenceTranslation() {
+        val app = ApplicationProvider.getApplicationContext<CoachApplication>()
+        val wholeTranslation = "旧课程整篇中文：这把刀钝了，换一把吧。"
+        val course = ReadingCourse(id = "legacy-ui", title = "旧课程", lessons = listOf(
+            ReadingLesson("d001", "旧版课文", 1, listOf(ReadingSentence("s001", "This knife is blunt."),
+                ReadingSentence("s002", "Let's use another one.")), translation = wholeTranslation)))
+        val bytes = ByteArrayOutputStream().also { output ->
+            ZipOutputStream(output).use { zip ->
+                zip.putNextEntry(ZipEntry("course.json")); zip.write(Json.encodeToString(course).toByteArray()); zip.closeEntry()
+            }
+        }.toByteArray()
+        val uri = android.net.Uri.parse("content://reader-ui/legacy-course")
+        shadowOf(app.contentResolver).registerInputStream(uri, bytes.inputStream())
+        runBlocking { app.container.readingRepository.importCourse(uri) }
+        val coach = coach()
+        compose.setContent { MaterialTheme { ReadingScreen(coach) {} } }
+        awaitText("打开课程")
+        compose.onNodeWithText("打开课程").performScrollTo().performClick()
+        awaitText("开始阅读")
+        compose.onNodeWithText("开始阅读").performClick()
+        compose.onNodeWithText("查看中文参考").performScrollTo().performClick()
+        compose.onNodeWithText("本句中文待补充。", substring = true).assertExists()
+        compose.onNodeWithText(wholeTranslation, substring = true).assertDoesNotExist()
+        compose.onNodeWithText("全文阅读").performScrollTo().performClick()
+        compose.onNodeWithText("查看中文参考").performScrollTo().performClick()
+        compose.onNodeWithText(wholeTranslation, substring = true).assertExists()
     }
 
     @Test fun freeReadingRestoresSelectedSentenceAndCompletionAfterRecreation() {

@@ -61,6 +61,12 @@ class CoursePackageReader(private val json: Json = Json { ignoreUnknownKeys = tr
                 sentence.grammar.forEach { token ->
                     require(token.end > token.start && token.start until token.end in spans &&
                         token.lemma.length in 1..100 && token.explanation.length in 1..2000)
+                    require(token.syntax.size <= 12 && token.syntax.map { it.start }.distinct().size == token.syntax.size)
+                    token.syntax.forEach { part ->
+                        require(part.start >= token.start && part.end <= token.end && part.end > part.start &&
+                            part.head in sentence.text.indices && part.lemma.length in 1..100 &&
+                            part.pos.length <= 20 && part.tag.length <= 20 && part.dependency.length <= 30)
+                    }
                 }
             }
             require(lesson.translation.length <= 30_000 && lesson.note.length <= 2000 && lesson.vocabulary.size <= 300)

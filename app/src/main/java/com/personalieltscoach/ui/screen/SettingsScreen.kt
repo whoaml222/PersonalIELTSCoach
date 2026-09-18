@@ -121,7 +121,7 @@ fun SettingsScreen(
 
         SectionCard("AI 设置") {
             secureStorageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Text("可选付费功能：只有手动点 AI 分析、写作批改或测试连接才会请求 OpenAI。所选文本会发送到该服务，不会发送整份课程或学习数据库。", style = MaterialTheme.typography.bodySmall)
+            Text("可选付费功能：只有手动点阅读中的 AI 拆解或测试连接才会请求 OpenAI。所选文本会发送到该服务，不会发送整份课程或学习数据库。", style = MaterialTheme.typography.bodySmall)
             Text("平台：GPT（其他平台预留，暂未启用）")
             OutlinedTextField(
                 value = apiKey,

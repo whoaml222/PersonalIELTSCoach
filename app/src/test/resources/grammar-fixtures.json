@@ -1,0 +1,3277 @@
+[
+  {
+    "text": "My heart was racing before the interview.",
+    "expected": "过去进行时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 2,
+        "lemma": "my",
+        "explanation": "“My”在这里标作代词：表示 heart 的所属关系，也就是谁的 heart。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 2,
+            "lemma": "my",
+            "pos": "PRON",
+            "tag": "PRP$",
+            "dependency": "poss",
+            "head": 3
+          }
+        ]
+      },
+      {
+        "start": 3,
+        "end": 8,
+        "lemma": "heart",
+        "explanation": "“heart”在这里标作名词：是 racing 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 3,
+            "end": 8,
+            "lemma": "heart",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "nsubj",
+            "head": 13
+          }
+        ]
+      },
+      {
+        "start": 9,
+        "end": 12,
+        "lemma": "be",
+        "explanation": "“was”在这里标作助动词或系动词：帮助 racing 构成时态、疑问或情态表达，不单独充当主要动作。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 9,
+            "end": 12,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBD",
+            "dependency": "aux",
+            "head": 13
+          }
+        ]
+      },
+      {
+        "start": 13,
+        "end": 19,
+        "lemma": "race",
+        "explanation": "“racing”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里与 be 搭配构成进行时。",
+        "syntax": [
+          {
+            "start": 13,
+            "end": 19,
+            "lemma": "race",
+            "pos": "VERB",
+            "tag": "VBG",
+            "dependency": "ROOT",
+            "head": 13
+          }
+        ]
+      },
+      {
+        "start": 20,
+        "end": 26,
+        "lemma": "before",
+        "explanation": "“before”在这里标作介词：引出与 racing 有关的介词短语，后面通常接名词或 -ing 形式。",
+        "syntax": [
+          {
+            "start": 20,
+            "end": 26,
+            "lemma": "before",
+            "pos": "ADP",
+            "tag": "IN",
+            "dependency": "prep",
+            "head": 13
+          }
+        ]
+      },
+      {
+        "start": 27,
+        "end": 30,
+        "lemma": "the",
+        "explanation": "“the”在这里标作限定词：限定 interview 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 27,
+            "end": 30,
+            "lemma": "the",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 31
+          }
+        ]
+      },
+      {
+        "start": 31,
+        "end": 40,
+        "lemma": "interview",
+        "explanation": "“interview”在这里标作名词：接在介词 before 后面，补充这个介词连接的对象。",
+        "syntax": [
+          {
+            "start": 31,
+            "end": 40,
+            "lemma": "interview",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "pobj",
+            "head": 20
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I work here.",
+    "expected": "一般现在时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 work 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "lemma": "work",
+        "explanation": "“work”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 6,
+            "lemma": "work",
+            "pos": "VERB",
+            "tag": "VBP",
+            "dependency": "ROOT",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 7,
+        "end": 11,
+        "lemma": "here",
+        "explanation": "“here”在这里标作副词：修饰 work，补充程度、方式、时间或范围。",
+        "syntax": [
+          {
+            "start": 7,
+            "end": 11,
+            "lemma": "here",
+            "pos": "ADV",
+            "tag": "RB",
+            "dependency": "advmod",
+            "head": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "She works here.",
+    "expected": "一般现在时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 3,
+        "lemma": "she",
+        "explanation": "“She”在这里标作代词：是 works 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 3,
+            "lemma": "she",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 4
+          }
+        ]
+      },
+      {
+        "start": 4,
+        "end": 9,
+        "lemma": "work",
+        "explanation": "“works”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 第三人称单数主语配合现在时单数动词形式。",
+        "syntax": [
+          {
+            "start": 4,
+            "end": 9,
+            "lemma": "work",
+            "pos": "VERB",
+            "tag": "VBZ",
+            "dependency": "ROOT",
+            "head": 4
+          }
+        ]
+      },
+      {
+        "start": 10,
+        "end": 14,
+        "lemma": "here",
+        "explanation": "“here”在这里标作副词：修饰 works，补充程度、方式、时间或范围。",
+        "syntax": [
+          {
+            "start": 10,
+            "end": 14,
+            "lemma": "here",
+            "pos": "ADV",
+            "tag": "RB",
+            "dependency": "advmod",
+            "head": 4
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I worked here last year.",
+    "expected": "一般过去时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 worked 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 8,
+        "lemma": "work",
+        "explanation": "“worked”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 8,
+            "lemma": "work",
+            "pos": "VERB",
+            "tag": "VBD",
+            "dependency": "ROOT",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 9,
+        "end": 13,
+        "lemma": "here",
+        "explanation": "“here”在这里标作副词：修饰 worked，补充程度、方式、时间或范围。",
+        "syntax": [
+          {
+            "start": 9,
+            "end": 13,
+            "lemma": "here",
+            "pos": "ADV",
+            "tag": "RB",
+            "dependency": "advmod",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 14,
+        "end": 18,
+        "lemma": "last",
+        "explanation": "“last”在这里标作形容词：修饰名词 year，说明它是什么样的。",
+        "syntax": [
+          {
+            "start": 14,
+            "end": 18,
+            "lemma": "last",
+            "pos": "ADJ",
+            "tag": "JJ",
+            "dependency": "amod",
+            "head": 19
+          }
+        ]
+      },
+      {
+        "start": 19,
+        "end": 23,
+        "lemma": "year",
+        "explanation": "“year”在这里标作名词：为 worked 补充时间、距离或程度等信息。",
+        "syntax": [
+          {
+            "start": 19,
+            "end": 23,
+            "lemma": "year",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "npadvmod",
+            "head": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I didn't work yesterday.",
+    "expected": "一般过去时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 work 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 9
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 8,
+        "lemma": "didn't",
+        "explanation": "这是口语中的缩写，下面按组成部分说明。\n“did”在这里标作助动词或系动词：帮助 work 构成时态、疑问或情态表达，不单独充当主要动作。 这里使用过去式，叙述过去的情况。\n“n't”在这里标作功能词：否定 work 所表达的动作或状态。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 5,
+            "lemma": "do",
+            "pos": "AUX",
+            "tag": "VBD",
+            "dependency": "aux",
+            "head": 9
+          },
+          {
+            "start": 5,
+            "end": 8,
+            "lemma": "not",
+            "pos": "PART",
+            "tag": "RB",
+            "dependency": "neg",
+            "head": 9
+          }
+        ]
+      },
+      {
+        "start": 9,
+        "end": 13,
+        "lemma": "work",
+        "explanation": "“work”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 9,
+            "end": 13,
+            "lemma": "work",
+            "pos": "VERB",
+            "tag": "VB",
+            "dependency": "ROOT",
+            "head": 9
+          }
+        ]
+      },
+      {
+        "start": 14,
+        "end": 23,
+        "lemma": "yesterday",
+        "explanation": "“yesterday”在这里标作名词：为 work 补充时间、距离或程度等信息。",
+        "syntax": [
+          {
+            "start": 14,
+            "end": 23,
+            "lemma": "yesterday",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "npadvmod",
+            "head": 9
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Did you work yesterday?",
+    "expected": "一般过去时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 3,
+        "lemma": "do",
+        "explanation": "“Did”在这里标作助动词或系动词：帮助 work 构成时态、疑问或情态表达，不单独充当主要动作。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 3,
+            "lemma": "do",
+            "pos": "AUX",
+            "tag": "VBD",
+            "dependency": "aux",
+            "head": 8
+          }
+        ]
+      },
+      {
+        "start": 4,
+        "end": 7,
+        "lemma": "you",
+        "explanation": "“you”在这里标作代词：是 work 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 4,
+            "end": 7,
+            "lemma": "you",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 8
+          }
+        ]
+      },
+      {
+        "start": 8,
+        "end": 12,
+        "lemma": "work",
+        "explanation": "“work”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 8,
+            "end": 12,
+            "lemma": "work",
+            "pos": "VERB",
+            "tag": "VB",
+            "dependency": "ROOT",
+            "head": 8
+          }
+        ]
+      },
+      {
+        "start": 13,
+        "end": 22,
+        "lemma": "yesterday",
+        "explanation": "“yesterday”在这里标作名词：为 work 补充时间、距离或程度等信息。",
+        "syntax": [
+          {
+            "start": 13,
+            "end": 22,
+            "lemma": "yesterday",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "npadvmod",
+            "head": 8
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I am working now.",
+    "expected": "现在进行时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 working 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 5
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 4,
+        "lemma": "be",
+        "explanation": "“am”在这里标作助动词或系动词：帮助 working 构成时态、疑问或情态表达，不单独充当主要动作。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 4,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBP",
+            "dependency": "aux",
+            "head": 5
+          }
+        ]
+      },
+      {
+        "start": 5,
+        "end": 12,
+        "lemma": "work",
+        "explanation": "“working”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里与 be 搭配构成进行时。",
+        "syntax": [
+          {
+            "start": 5,
+            "end": 12,
+            "lemma": "work",
+            "pos": "VERB",
+            "tag": "VBG",
+            "dependency": "ROOT",
+            "head": 5
+          }
+        ]
+      },
+      {
+        "start": 13,
+        "end": 16,
+        "lemma": "now",
+        "explanation": "“now”在这里标作副词：修饰 working，补充程度、方式、时间或范围。",
+        "syntax": [
+          {
+            "start": 13,
+            "end": 16,
+            "lemma": "now",
+            "pos": "ADV",
+            "tag": "RB",
+            "dependency": "advmod",
+            "head": 5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I have lost my keys.",
+    "expected": "现在完成时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 lost 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 7
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "lemma": "have",
+        "explanation": "“have”在这里标作助动词或系动词：帮助 lost 构成时态、疑问或情态表达，不单独充当主要动作。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 6,
+            "lemma": "have",
+            "pos": "AUX",
+            "tag": "VBP",
+            "dependency": "aux",
+            "head": 7
+          }
+        ]
+      },
+      {
+        "start": 7,
+        "end": 11,
+        "lemma": "lose",
+        "explanation": "“lost”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 have/has/had + 过去分词构成完成时。",
+        "syntax": [
+          {
+            "start": 7,
+            "end": 11,
+            "lemma": "lose",
+            "pos": "VERB",
+            "tag": "VBN",
+            "dependency": "ROOT",
+            "head": 7
+          }
+        ]
+      },
+      {
+        "start": 12,
+        "end": 14,
+        "lemma": "my",
+        "explanation": "“my”在这里标作代词：表示 keys 的所属关系，也就是谁的 keys。",
+        "syntax": [
+          {
+            "start": 12,
+            "end": 14,
+            "lemma": "my",
+            "pos": "PRON",
+            "tag": "PRP$",
+            "dependency": "poss",
+            "head": 15
+          }
+        ]
+      },
+      {
+        "start": 15,
+        "end": 19,
+        "lemma": "key",
+        "explanation": "“keys”在这里标作名词：是 lost 的宾语，表示动作涉及的对象。 这里是复数形式，表示不止一个。",
+        "syntax": [
+          {
+            "start": 15,
+            "end": 19,
+            "lemma": "key",
+            "pos": "NOUN",
+            "tag": "NNS",
+            "dependency": "dobj",
+            "head": 7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "He's eaten lunch.",
+    "expected": "现在完成时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 4,
+        "lemma": "He's",
+        "explanation": "He's 在本句展开为 He has；has 与 eaten 构成现在完成时。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 2,
+            "lemma": "he",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 5
+          },
+          {
+            "start": 2,
+            "end": 4,
+            "lemma": "have",
+            "pos": "AUX",
+            "tag": "VBZ",
+            "dependency": "aux",
+            "head": 5
+          }
+        ]
+      },
+      {
+        "start": 5,
+        "end": 10,
+        "lemma": "eat",
+        "explanation": "eaten 是 eat 的过去分词，与 has 构成现在完成时，lunch 是宾语。",
+        "syntax": [
+          {
+            "start": 5,
+            "end": 10,
+            "lemma": "eat",
+            "pos": "VERB",
+            "tag": "VBN",
+            "dependency": "ROOT",
+            "head": 5
+          }
+        ]
+      },
+      {
+        "start": 11,
+        "end": 16,
+        "lemma": "lunch",
+        "explanation": "“lunch”在这里标作名词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 11,
+            "end": 16,
+            "lemma": "lunch",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "dobj",
+            "head": 5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "She's a nurse.",
+    "expected": "一般现在时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 5,
+        "lemma": "She's",
+        "explanation": "这是口语中的缩写，下面按组成部分说明。\n“She”在这里标作代词：是 's 的主语，说明谁做这个动作或谁处于这种状态。\n“'s”在这里标作助动词或系动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 第三人称单数主语配合现在时单数动词形式。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 3,
+            "lemma": "she",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 3
+          },
+          {
+            "start": 3,
+            "end": 5,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBZ",
+            "dependency": "ROOT",
+            "head": 3
+          }
+        ]
+      },
+      {
+        "start": 6,
+        "end": 7,
+        "lemma": "a",
+        "explanation": "“a”在这里标作限定词：限定 nurse 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 6,
+            "end": 7,
+            "lemma": "a",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 8
+          }
+        ]
+      },
+      {
+        "start": 8,
+        "end": 13,
+        "lemma": "nurse",
+        "explanation": "“nurse”在这里标作名词：接在 's 后作表语，补充主语的身份或特征。",
+        "syntax": [
+          {
+            "start": 8,
+            "end": 13,
+            "lemma": "nurse",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "attr",
+            "head": 3
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "She had left when I arrived.",
+    "expected": "过去完成时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 3,
+        "lemma": "she",
+        "explanation": "“She”在这里标作代词：是 left 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 3,
+            "lemma": "she",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 8
+          }
+        ]
+      },
+      {
+        "start": 4,
+        "end": 7,
+        "lemma": "have",
+        "explanation": "“had”在这里标作助动词或系动词：帮助 left 构成时态、疑问或情态表达，不单独充当主要动作。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 4,
+            "end": 7,
+            "lemma": "have",
+            "pos": "AUX",
+            "tag": "VBD",
+            "dependency": "aux",
+            "head": 8
+          }
+        ]
+      },
+      {
+        "start": 8,
+        "end": 12,
+        "lemma": "leave",
+        "explanation": "“left”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 have/has/had + 过去分词构成完成时。",
+        "syntax": [
+          {
+            "start": 8,
+            "end": 12,
+            "lemma": "leave",
+            "pos": "VERB",
+            "tag": "VBN",
+            "dependency": "ROOT",
+            "head": 8
+          }
+        ]
+      },
+      {
+        "start": 13,
+        "end": 17,
+        "lemma": "when",
+        "explanation": "“when”在这里标作从属连词：修饰 arrived，补充程度、方式、时间或范围。",
+        "syntax": [
+          {
+            "start": 13,
+            "end": 17,
+            "lemma": "when",
+            "pos": "SCONJ",
+            "tag": "WRB",
+            "dependency": "advmod",
+            "head": 20
+          }
+        ]
+      },
+      {
+        "start": 18,
+        "end": 19,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 arrived 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 18,
+            "end": 19,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 20
+          }
+        ]
+      },
+      {
+        "start": 20,
+        "end": 27,
+        "lemma": "arrive",
+        "explanation": "“arrived”在这里标作动词：所在分句补充 left 的时间、原因、条件或结果。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 20,
+            "end": 27,
+            "lemma": "arrive",
+            "pos": "VERB",
+            "tag": "VBD",
+            "dependency": "advcl",
+            "head": 8
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I have been waiting for an hour.",
+    "expected": "现在完成进行时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 waiting 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "lemma": "have",
+        "explanation": "“have”在这里标作助动词或系动词：帮助 waiting 构成时态、疑问或情态表达，不单独充当主要动作。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 6,
+            "lemma": "have",
+            "pos": "AUX",
+            "tag": "VBP",
+            "dependency": "aux",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 7,
+        "end": 11,
+        "lemma": "be",
+        "explanation": "“been”在这里标作助动词或系动词：帮助 waiting 构成时态、疑问或情态表达，不单独充当主要动作。 这是过去分词形式，可用于完成、被动或修饰；具体看周围结构。",
+        "syntax": [
+          {
+            "start": 7,
+            "end": 11,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBN",
+            "dependency": "aux",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 12,
+        "end": 19,
+        "lemma": "wait",
+        "explanation": "“waiting”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里与 be 搭配构成进行时。",
+        "syntax": [
+          {
+            "start": 12,
+            "end": 19,
+            "lemma": "wait",
+            "pos": "VERB",
+            "tag": "VBG",
+            "dependency": "ROOT",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 20,
+        "end": 23,
+        "lemma": "for",
+        "explanation": "“for”在这里标作介词：引出与 waiting 有关的介词短语，后面通常接名词或 -ing 形式。",
+        "syntax": [
+          {
+            "start": 20,
+            "end": 23,
+            "lemma": "for",
+            "pos": "ADP",
+            "tag": "IN",
+            "dependency": "prep",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 24,
+        "end": 26,
+        "lemma": "an",
+        "explanation": "“an”在这里标作限定词：限定 hour 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 24,
+            "end": 26,
+            "lemma": "an",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 27
+          }
+        ]
+      },
+      {
+        "start": 27,
+        "end": 31,
+        "lemma": "hour",
+        "explanation": "“hour”在这里标作名词：接在介词 for 后面，补充这个介词连接的对象。",
+        "syntax": [
+          {
+            "start": 27,
+            "end": 31,
+            "lemma": "hour",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "pobj",
+            "head": 20
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I had been waiting for an hour when she arrived.",
+    "expected": "过去完成进行时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 waiting 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 11
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 5,
+        "lemma": "have",
+        "explanation": "“had”在这里标作助动词或系动词：帮助 waiting 构成时态、疑问或情态表达，不单独充当主要动作。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 5,
+            "lemma": "have",
+            "pos": "AUX",
+            "tag": "VBD",
+            "dependency": "aux",
+            "head": 11
+          }
+        ]
+      },
+      {
+        "start": 6,
+        "end": 10,
+        "lemma": "be",
+        "explanation": "“been”在这里标作助动词或系动词：帮助 waiting 构成时态、疑问或情态表达，不单独充当主要动作。 这是过去分词形式，可用于完成、被动或修饰；具体看周围结构。",
+        "syntax": [
+          {
+            "start": 6,
+            "end": 10,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBN",
+            "dependency": "aux",
+            "head": 11
+          }
+        ]
+      },
+      {
+        "start": 11,
+        "end": 18,
+        "lemma": "wait",
+        "explanation": "“waiting”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里与 be 搭配构成进行时。",
+        "syntax": [
+          {
+            "start": 11,
+            "end": 18,
+            "lemma": "wait",
+            "pos": "VERB",
+            "tag": "VBG",
+            "dependency": "ROOT",
+            "head": 11
+          }
+        ]
+      },
+      {
+        "start": 19,
+        "end": 22,
+        "lemma": "for",
+        "explanation": "“for”在这里标作介词：引出与 waiting 有关的介词短语，后面通常接名词或 -ing 形式。",
+        "syntax": [
+          {
+            "start": 19,
+            "end": 22,
+            "lemma": "for",
+            "pos": "ADP",
+            "tag": "IN",
+            "dependency": "prep",
+            "head": 11
+          }
+        ]
+      },
+      {
+        "start": 23,
+        "end": 25,
+        "lemma": "an",
+        "explanation": "“an”在这里标作限定词：限定 hour 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 23,
+            "end": 25,
+            "lemma": "an",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 26
+          }
+        ]
+      },
+      {
+        "start": 26,
+        "end": 30,
+        "lemma": "hour",
+        "explanation": "“hour”在这里标作名词：接在介词 for 后面，补充这个介词连接的对象。",
+        "syntax": [
+          {
+            "start": 26,
+            "end": 30,
+            "lemma": "hour",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "pobj",
+            "head": 19
+          }
+        ]
+      },
+      {
+        "start": 31,
+        "end": 35,
+        "lemma": "when",
+        "explanation": "“when”在这里标作从属连词：修饰 arrived，补充程度、方式、时间或范围。",
+        "syntax": [
+          {
+            "start": 31,
+            "end": 35,
+            "lemma": "when",
+            "pos": "SCONJ",
+            "tag": "WRB",
+            "dependency": "advmod",
+            "head": 40
+          }
+        ]
+      },
+      {
+        "start": 36,
+        "end": 39,
+        "lemma": "she",
+        "explanation": "“she”在这里标作代词：是 arrived 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 36,
+            "end": 39,
+            "lemma": "she",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 40
+          }
+        ]
+      },
+      {
+        "start": 40,
+        "end": 47,
+        "lemma": "arrive",
+        "explanation": "“arrived”在这里标作动词：所在关系从句修饰 hour，说明具体是哪一个人或事物。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 40,
+            "end": 47,
+            "lemma": "arrive",
+            "pos": "VERB",
+            "tag": "VBD",
+            "dependency": "relcl",
+            "head": 26
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I will call you tomorrow.",
+    "expected": "will 将来表达",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 call 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 7
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "lemma": "will",
+        "explanation": "“will”在这里标作助动词或系动词：帮助 call 构成时态、疑问或情态表达，不单独充当主要动作。 情态动词后通常用动词原形；could/would 在请求中常表示礼貌。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 6,
+            "lemma": "will",
+            "pos": "AUX",
+            "tag": "MD",
+            "dependency": "aux",
+            "head": 7
+          }
+        ]
+      },
+      {
+        "start": 7,
+        "end": 11,
+        "lemma": "call",
+        "explanation": "“call”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 7,
+            "end": 11,
+            "lemma": "call",
+            "pos": "VERB",
+            "tag": "VB",
+            "dependency": "ROOT",
+            "head": 7
+          }
+        ]
+      },
+      {
+        "start": 12,
+        "end": 15,
+        "lemma": "you",
+        "explanation": "“you”在这里标作代词：是 call 的宾语，表示动作涉及的对象。",
+        "syntax": [
+          {
+            "start": 12,
+            "end": 15,
+            "lemma": "you",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "dobj",
+            "head": 7
+          }
+        ]
+      },
+      {
+        "start": 16,
+        "end": 24,
+        "lemma": "tomorrow",
+        "explanation": "“tomorrow”在这里标作名词：为 call 补充时间、距离或程度等信息。",
+        "syntax": [
+          {
+            "start": 16,
+            "end": 24,
+            "lemma": "tomorrow",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "npadvmod",
+            "head": 7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Could you help me?",
+    "expected": "情态表达",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 5,
+        "lemma": "could",
+        "explanation": "“Could”在这里标作助动词或系动词：帮助 help 构成时态、疑问或情态表达，不单独充当主要动作。 情态动词后通常用动词原形；could/would 在请求中常表示礼貌。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 5,
+            "lemma": "could",
+            "pos": "AUX",
+            "tag": "MD",
+            "dependency": "aux",
+            "head": 10
+          }
+        ]
+      },
+      {
+        "start": 6,
+        "end": 9,
+        "lemma": "you",
+        "explanation": "“you”在这里标作代词：是 help 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 6,
+            "end": 9,
+            "lemma": "you",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 10
+          }
+        ]
+      },
+      {
+        "start": 10,
+        "end": 14,
+        "lemma": "help",
+        "explanation": "“help”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 10,
+            "end": 14,
+            "lemma": "help",
+            "pos": "VERB",
+            "tag": "VB",
+            "dependency": "ROOT",
+            "head": 10
+          }
+        ]
+      },
+      {
+        "start": 15,
+        "end": 17,
+        "lemma": "I",
+        "explanation": "“me”在这里标作代词：是 help 的宾语，表示动作涉及的对象。",
+        "syntax": [
+          {
+            "start": 15,
+            "end": 17,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "dobj",
+            "head": 10
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Open the door, please.",
+    "expected": "祈使句",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 4,
+        "lemma": "open",
+        "explanation": "“Open”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 4,
+            "lemma": "open",
+            "pos": "VERB",
+            "tag": "VB",
+            "dependency": "ROOT",
+            "head": 0
+          }
+        ]
+      },
+      {
+        "start": 5,
+        "end": 8,
+        "lemma": "the",
+        "explanation": "“the”在这里标作限定词：限定 door 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 5,
+            "end": 8,
+            "lemma": "the",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 9
+          }
+        ]
+      },
+      {
+        "start": 9,
+        "end": 13,
+        "lemma": "door",
+        "explanation": "“door”在这里标作名词：是 Open 的宾语，表示动作涉及的对象。",
+        "syntax": [
+          {
+            "start": 9,
+            "end": 13,
+            "lemma": "door",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "dobj",
+            "head": 0
+          }
+        ]
+      },
+      {
+        "start": 15,
+        "end": 21,
+        "lemma": "please",
+        "explanation": "“please”在这里标作感叹词：表达招呼或即时反应，较独立于句子的主要结构。",
+        "syntax": [
+          {
+            "start": 15,
+            "end": 21,
+            "lemma": "please",
+            "pos": "INTJ",
+            "tag": "UH",
+            "dependency": "intj",
+            "head": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "The car was repaired yesterday.",
+    "expected": "一般过去时 · 被动语态",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 3,
+        "lemma": "the",
+        "explanation": "“The”在这里标作限定词：限定 car 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 3,
+            "lemma": "the",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 4
+          }
+        ]
+      },
+      {
+        "start": 4,
+        "end": 7,
+        "lemma": "car",
+        "explanation": "“car”在这里标作名词：是被动结构 repaired 的主语，表示承受动作的人或事物。",
+        "syntax": [
+          {
+            "start": 4,
+            "end": 7,
+            "lemma": "car",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "nsubjpass",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 8,
+        "end": 11,
+        "lemma": "be",
+        "explanation": "“was”在这里标作助动词或系动词：与 repaired 的过去分词构成被动语态，主语承受动作。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 8,
+            "end": 11,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBD",
+            "dependency": "auxpass",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 12,
+        "end": 20,
+        "lemma": "repair",
+        "explanation": "“repaired”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 be + 过去分词构成被动语态。",
+        "syntax": [
+          {
+            "start": 12,
+            "end": 20,
+            "lemma": "repair",
+            "pos": "VERB",
+            "tag": "VBN",
+            "dependency": "ROOT",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 21,
+        "end": 30,
+        "lemma": "yesterday",
+        "explanation": "“yesterday”在这里标作名词：为 repaired 补充时间、距离或程度等信息。",
+        "syntax": [
+          {
+            "start": 21,
+            "end": 30,
+            "lemma": "yesterday",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "npadvmod",
+            "head": 12
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "The car is being repaired.",
+    "expected": "现在进行时 · 被动语态",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 3,
+        "lemma": "the",
+        "explanation": "“The”在这里标作限定词：限定 car 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 3,
+            "lemma": "the",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 4
+          }
+        ]
+      },
+      {
+        "start": 4,
+        "end": 7,
+        "lemma": "car",
+        "explanation": "“car”在这里标作名词：是被动结构 repaired 的主语，表示承受动作的人或事物。",
+        "syntax": [
+          {
+            "start": 4,
+            "end": 7,
+            "lemma": "car",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "nsubjpass",
+            "head": 17
+          }
+        ]
+      },
+      {
+        "start": 8,
+        "end": 10,
+        "lemma": "be",
+        "explanation": "“is”在这里标作助动词或系动词：帮助 repaired 构成时态、疑问或情态表达，不单独充当主要动作。 第三人称单数主语配合现在时单数动词形式。",
+        "syntax": [
+          {
+            "start": 8,
+            "end": 10,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBZ",
+            "dependency": "aux",
+            "head": 17
+          }
+        ]
+      },
+      {
+        "start": 11,
+        "end": 16,
+        "lemma": "be",
+        "explanation": "“being”在这里标作助动词或系动词：与 repaired 的过去分词构成被动语态，主语承受动作。 这里用 -ing 形式；不能仅凭 -ing 就判断为进行时。",
+        "syntax": [
+          {
+            "start": 11,
+            "end": 16,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBG",
+            "dependency": "auxpass",
+            "head": 17
+          }
+        ]
+      },
+      {
+        "start": 17,
+        "end": 25,
+        "lemma": "repair",
+        "explanation": "“repaired”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 be + 过去分词构成被动语态。",
+        "syntax": [
+          {
+            "start": 17,
+            "end": 25,
+            "lemma": "repair",
+            "pos": "VERB",
+            "tag": "VBN",
+            "dependency": "ROOT",
+            "head": 17
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I enjoy swimming.",
+    "expected": "一般现在时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 enjoy 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 7,
+        "lemma": "enjoy",
+        "explanation": "“enjoy”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 7,
+            "lemma": "enjoy",
+            "pos": "VERB",
+            "tag": "VBP",
+            "dependency": "ROOT",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 8,
+        "end": 16,
+        "lemma": "swim",
+        "explanation": "“swimming”在这里标作动词：是 enjoy 的宾语，表示动作涉及的对象。 这里用 -ing 形式；不能仅凭 -ing 就判断为进行时。",
+        "syntax": [
+          {
+            "start": 8,
+            "end": 16,
+            "lemma": "swim",
+            "pos": "VERB",
+            "tag": "VBG",
+            "dependency": "dobj",
+            "head": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I have a car.",
+    "expected": "一般现在时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 have 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "lemma": "have",
+        "explanation": "“have”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 6,
+            "lemma": "have",
+            "pos": "VERB",
+            "tag": "VBP",
+            "dependency": "ROOT",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 7,
+        "end": 8,
+        "lemma": "a",
+        "explanation": "“a”在这里标作限定词：限定 car 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 7,
+            "end": 8,
+            "lemma": "a",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 9
+          }
+        ]
+      },
+      {
+        "start": 9,
+        "end": 12,
+        "lemma": "car",
+        "explanation": "“car”在这里标作名词：是 have 的宾语，表示动作涉及的对象。",
+        "syntax": [
+          {
+            "start": 9,
+            "end": 12,
+            "lemma": "car",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "dobj",
+            "head": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I was tired.",
+    "expected": "一般过去时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 was 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 5,
+        "lemma": "be",
+        "explanation": "“was”在这里标作助动词或系动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 5,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBD",
+            "dependency": "ROOT",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 6,
+        "end": 11,
+        "lemma": "tired",
+        "explanation": "“tired”在这里标作形容词：接在 was 后作表语，说明 I 的状态或性质。",
+        "syntax": [
+          {
+            "start": 6,
+            "end": 11,
+            "lemma": "tired",
+            "pos": "ADJ",
+            "tag": "JJ",
+            "dependency": "acomp",
+            "head": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "She was cooking when I arrived.",
+    "expected": "过去进行时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 3,
+        "lemma": "she",
+        "explanation": "“She”在这里标作代词：是 cooking 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 3,
+            "lemma": "she",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 8
+          }
+        ]
+      },
+      {
+        "start": 4,
+        "end": 7,
+        "lemma": "be",
+        "explanation": "“was”在这里标作助动词或系动词：帮助 cooking 构成时态、疑问或情态表达，不单独充当主要动作。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 4,
+            "end": 7,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBD",
+            "dependency": "aux",
+            "head": 8
+          }
+        ]
+      },
+      {
+        "start": 8,
+        "end": 15,
+        "lemma": "cook",
+        "explanation": "“cooking”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里与 be 搭配构成进行时。",
+        "syntax": [
+          {
+            "start": 8,
+            "end": 15,
+            "lemma": "cook",
+            "pos": "VERB",
+            "tag": "VBG",
+            "dependency": "ROOT",
+            "head": 8
+          }
+        ]
+      },
+      {
+        "start": 16,
+        "end": 20,
+        "lemma": "when",
+        "explanation": "“when”在这里标作从属连词：修饰 arrived，补充程度、方式、时间或范围。",
+        "syntax": [
+          {
+            "start": 16,
+            "end": 20,
+            "lemma": "when",
+            "pos": "SCONJ",
+            "tag": "WRB",
+            "dependency": "advmod",
+            "head": 23
+          }
+        ]
+      },
+      {
+        "start": 21,
+        "end": 22,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 arrived 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 21,
+            "end": 22,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 23
+          }
+        ]
+      },
+      {
+        "start": 23,
+        "end": 30,
+        "lemma": "arrive",
+        "explanation": "“arrived”在这里标作动词：所在分句补充 cooking 的时间、原因、条件或结果。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 23,
+            "end": 30,
+            "lemma": "arrive",
+            "pos": "VERB",
+            "tag": "VBD",
+            "dependency": "advcl",
+            "head": 8
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I stayed home because it was raining.",
+    "expected": "一般过去时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 stayed 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 8,
+        "lemma": "stay",
+        "explanation": "“stayed”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 8,
+            "lemma": "stay",
+            "pos": "VERB",
+            "tag": "VBD",
+            "dependency": "ROOT",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 9,
+        "end": 13,
+        "lemma": "home",
+        "explanation": "“home”在这里标作副词：修饰 stayed，补充程度、方式、时间或范围。",
+        "syntax": [
+          {
+            "start": 9,
+            "end": 13,
+            "lemma": "home",
+            "pos": "ADV",
+            "tag": "RB",
+            "dependency": "advmod",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 14,
+        "end": 21,
+        "lemma": "because",
+        "explanation": "“because”在这里标作从属连词：引出以 was 为核心的从句，说明条件、时间、原因等关系。",
+        "syntax": [
+          {
+            "start": 14,
+            "end": 21,
+            "lemma": "because",
+            "pos": "SCONJ",
+            "tag": "IN",
+            "dependency": "mark",
+            "head": 25
+          }
+        ]
+      },
+      {
+        "start": 22,
+        "end": 24,
+        "lemma": "it",
+        "explanation": "“it”在这里标作代词：是 was 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 22,
+            "end": 24,
+            "lemma": "it",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 25
+          }
+        ]
+      },
+      {
+        "start": 25,
+        "end": 28,
+        "lemma": "be",
+        "explanation": "“was”在这里标作助动词或系动词：帮助 raining 构成时态、疑问或情态表达，不单独充当主要动作。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 25,
+            "end": 28,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBD",
+            "dependency": "aux",
+            "head": 29
+          }
+        ]
+      },
+      {
+        "start": 29,
+        "end": 36,
+        "lemma": "rain",
+        "explanation": "“raining”在这里标作动词：所在分句补充 stayed 的时间、原因、条件或结果。 这里与 be 搭配构成进行时。",
+        "syntax": [
+          {
+            "start": 29,
+            "end": 36,
+            "lemma": "rain",
+            "pos": "VERB",
+            "tag": "VBG",
+            "dependency": "advcl",
+            "head": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I left before the interview.",
+    "expected": "一般过去时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 left 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "lemma": "leave",
+        "explanation": "“left”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 6,
+            "lemma": "leave",
+            "pos": "VERB",
+            "tag": "VBD",
+            "dependency": "ROOT",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 7,
+        "end": 13,
+        "lemma": "before",
+        "explanation": "“before”在这里标作介词：引出与 left 有关的介词短语，后面通常接名词或 -ing 形式。",
+        "syntax": [
+          {
+            "start": 7,
+            "end": 13,
+            "lemma": "before",
+            "pos": "ADP",
+            "tag": "IN",
+            "dependency": "prep",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 14,
+        "end": 17,
+        "lemma": "the",
+        "explanation": "“the”在这里标作限定词：限定 interview 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 14,
+            "end": 17,
+            "lemma": "the",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 18
+          }
+        ]
+      },
+      {
+        "start": 18,
+        "end": 27,
+        "lemma": "interview",
+        "explanation": "“interview”在这里标作名词：接在介词 before 后面，补充这个介词连接的对象。",
+        "syntax": [
+          {
+            "start": 18,
+            "end": 27,
+            "lemma": "interview",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "pobj",
+            "head": 7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I left before the interview started.",
+    "expected": "一般过去时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 left 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "lemma": "leave",
+        "explanation": "“left”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 6,
+            "lemma": "leave",
+            "pos": "VERB",
+            "tag": "VBD",
+            "dependency": "ROOT",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 7,
+        "end": 13,
+        "lemma": "before",
+        "explanation": "“before”在这里标作从属连词：引出以 started 为核心的从句，说明条件、时间、原因等关系。",
+        "syntax": [
+          {
+            "start": 7,
+            "end": 13,
+            "lemma": "before",
+            "pos": "SCONJ",
+            "tag": "IN",
+            "dependency": "mark",
+            "head": 28
+          }
+        ]
+      },
+      {
+        "start": 14,
+        "end": 17,
+        "lemma": "the",
+        "explanation": "“the”在这里标作限定词：限定 interview 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 14,
+            "end": 17,
+            "lemma": "the",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 18
+          }
+        ]
+      },
+      {
+        "start": 18,
+        "end": 27,
+        "lemma": "interview",
+        "explanation": "“interview”在这里标作名词：是 started 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 18,
+            "end": 27,
+            "lemma": "interview",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "nsubj",
+            "head": 28
+          }
+        ]
+      },
+      {
+        "start": 28,
+        "end": 35,
+        "lemma": "start",
+        "explanation": "“started”在这里标作动词：所在分句补充 left 的时间、原因、条件或结果。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 28,
+            "end": 35,
+            "lemma": "start",
+            "pos": "VERB",
+            "tag": "VBD",
+            "dependency": "advcl",
+            "head": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I will have finished by Friday.",
+    "expected": "将来完成时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 finished 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "lemma": "will",
+        "explanation": "“will”在这里标作助动词或系动词：帮助 finished 构成时态、疑问或情态表达，不单独充当主要动作。 情态动词后通常用动词原形；could/would 在请求中常表示礼貌。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 6,
+            "lemma": "will",
+            "pos": "AUX",
+            "tag": "MD",
+            "dependency": "aux",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 7,
+        "end": 11,
+        "lemma": "have",
+        "explanation": "“have”在这里标作助动词或系动词：帮助 finished 构成时态、疑问或情态表达，不单独充当主要动作。",
+        "syntax": [
+          {
+            "start": 7,
+            "end": 11,
+            "lemma": "have",
+            "pos": "AUX",
+            "tag": "VB",
+            "dependency": "aux",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 12,
+        "end": 20,
+        "lemma": "finish",
+        "explanation": "“finished”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 have/has/had + 过去分词构成完成时。",
+        "syntax": [
+          {
+            "start": 12,
+            "end": 20,
+            "lemma": "finish",
+            "pos": "VERB",
+            "tag": "VBN",
+            "dependency": "ROOT",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 21,
+        "end": 23,
+        "lemma": "by",
+        "explanation": "“by”在这里标作介词：引出与 finished 有关的介词短语，后面通常接名词或 -ing 形式。",
+        "syntax": [
+          {
+            "start": 21,
+            "end": 23,
+            "lemma": "by",
+            "pos": "ADP",
+            "tag": "IN",
+            "dependency": "prep",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 24,
+        "end": 30,
+        "lemma": "Friday",
+        "explanation": "“Friday”在这里标作专有名词：接在介词 by 后面，补充这个介词连接的对象。",
+        "syntax": [
+          {
+            "start": 24,
+            "end": 30,
+            "lemma": "Friday",
+            "pos": "PROPN",
+            "tag": "NNP",
+            "dependency": "pobj",
+            "head": 21
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Don't open the door.",
+    "expected": "祈使句",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 5,
+        "lemma": "Don't",
+        "explanation": "这是口语中的缩写，下面按组成部分说明。\n“Do”在这里标作助动词或系动词：帮助 open 构成时态、疑问或情态表达，不单独充当主要动作。\n“n't”在这里标作功能词：否定 open 所表达的动作或状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 2,
+            "lemma": "do",
+            "pos": "AUX",
+            "tag": "VBP",
+            "dependency": "aux",
+            "head": 6
+          },
+          {
+            "start": 2,
+            "end": 5,
+            "lemma": "not",
+            "pos": "PART",
+            "tag": "RB",
+            "dependency": "neg",
+            "head": 6
+          }
+        ]
+      },
+      {
+        "start": 6,
+        "end": 10,
+        "lemma": "open",
+        "explanation": "“open”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 6,
+            "end": 10,
+            "lemma": "open",
+            "pos": "VERB",
+            "tag": "VB",
+            "dependency": "ROOT",
+            "head": 6
+          }
+        ]
+      },
+      {
+        "start": 11,
+        "end": 14,
+        "lemma": "the",
+        "explanation": "“the”在这里标作限定词：限定 door 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 11,
+            "end": 14,
+            "lemma": "the",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 15
+          }
+        ]
+      },
+      {
+        "start": 15,
+        "end": 19,
+        "lemma": "door",
+        "explanation": "“door”在这里标作名词：是 open 的宾语，表示动作涉及的对象。",
+        "syntax": [
+          {
+            "start": 15,
+            "end": 19,
+            "lemma": "door",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "dobj",
+            "head": 6
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Don't be late.",
+    "expected": "祈使句",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 5,
+        "lemma": "Don't",
+        "explanation": "这是口语中的缩写，下面按组成部分说明。\n“Do”在这里标作助动词或系动词：帮助 be 构成时态、疑问或情态表达，不单独充当主要动作。\n“n't”在这里标作功能词：否定 be 所表达的动作或状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 2,
+            "lemma": "do",
+            "pos": "AUX",
+            "tag": "VB",
+            "dependency": "aux",
+            "head": 6
+          },
+          {
+            "start": 2,
+            "end": 5,
+            "lemma": "not",
+            "pos": "PART",
+            "tag": "RB",
+            "dependency": "neg",
+            "head": 6
+          }
+        ]
+      },
+      {
+        "start": 6,
+        "end": 8,
+        "lemma": "be",
+        "explanation": "“be”在这里标作助动词或系动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 6,
+            "end": 8,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VB",
+            "dependency": "ROOT",
+            "head": 6
+          }
+        ]
+      },
+      {
+        "start": 9,
+        "end": 13,
+        "lemma": "late",
+        "explanation": "“late”在这里标作形容词：接在 be 后作表语，说明 主语 的状态或性质。",
+        "syntax": [
+          {
+            "start": 9,
+            "end": 13,
+            "lemma": "late",
+            "pos": "ADJ",
+            "tag": "JJ",
+            "dependency": "acomp",
+            "head": 6
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I will be working at ten tomorrow.",
+    "expected": "将来进行时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 working 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 10
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "lemma": "will",
+        "explanation": "“will”在这里标作助动词或系动词：帮助 working 构成时态、疑问或情态表达，不单独充当主要动作。 情态动词后通常用动词原形；could/would 在请求中常表示礼貌。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 6,
+            "lemma": "will",
+            "pos": "AUX",
+            "tag": "MD",
+            "dependency": "aux",
+            "head": 10
+          }
+        ]
+      },
+      {
+        "start": 7,
+        "end": 9,
+        "lemma": "be",
+        "explanation": "“be”在这里标作助动词或系动词：帮助 working 构成时态、疑问或情态表达，不单独充当主要动作。",
+        "syntax": [
+          {
+            "start": 7,
+            "end": 9,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VB",
+            "dependency": "aux",
+            "head": 10
+          }
+        ]
+      },
+      {
+        "start": 10,
+        "end": 17,
+        "lemma": "work",
+        "explanation": "“working”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里与 be 搭配构成进行时。",
+        "syntax": [
+          {
+            "start": 10,
+            "end": 17,
+            "lemma": "work",
+            "pos": "VERB",
+            "tag": "VBG",
+            "dependency": "ROOT",
+            "head": 10
+          }
+        ]
+      },
+      {
+        "start": 18,
+        "end": 20,
+        "lemma": "at",
+        "explanation": "“at”在这里标作介词：引出与 working 有关的介词短语，后面通常接名词或 -ing 形式。",
+        "syntax": [
+          {
+            "start": 18,
+            "end": 20,
+            "lemma": "at",
+            "pos": "ADP",
+            "tag": "IN",
+            "dependency": "prep",
+            "head": 10
+          }
+        ]
+      },
+      {
+        "start": 21,
+        "end": 24,
+        "lemma": "ten",
+        "explanation": "“ten”在这里标作数词：接在介词 at 后面，补充这个介词连接的对象。",
+        "syntax": [
+          {
+            "start": 21,
+            "end": 24,
+            "lemma": "ten",
+            "pos": "NUM",
+            "tag": "CD",
+            "dependency": "pobj",
+            "head": 18
+          }
+        ]
+      },
+      {
+        "start": 25,
+        "end": 33,
+        "lemma": "tomorrow",
+        "explanation": "“tomorrow”在这里标作名词：接在介词 at 后面，补充这个介词连接的对象。",
+        "syntax": [
+          {
+            "start": 25,
+            "end": 33,
+            "lemma": "tomorrow",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "pobj",
+            "head": 18
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "By June, I will have been working here for a year.",
+    "expected": "将来完成进行时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 2,
+        "lemma": "by",
+        "explanation": "“By”在这里标作介词：引出与 working 有关的介词短语，后面通常接名词或 -ing 形式。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 2,
+            "lemma": "by",
+            "pos": "ADP",
+            "tag": "IN",
+            "dependency": "prep",
+            "head": 26
+          }
+        ]
+      },
+      {
+        "start": 3,
+        "end": 7,
+        "lemma": "June",
+        "explanation": "“June”在这里标作专有名词：接在介词 By 后面，补充这个介词连接的对象。",
+        "syntax": [
+          {
+            "start": 3,
+            "end": 7,
+            "lemma": "June",
+            "pos": "PROPN",
+            "tag": "NNP",
+            "dependency": "pobj",
+            "head": 0
+          }
+        ]
+      },
+      {
+        "start": 9,
+        "end": 10,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 working 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 9,
+            "end": 10,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 26
+          }
+        ]
+      },
+      {
+        "start": 11,
+        "end": 15,
+        "lemma": "will",
+        "explanation": "“will”在这里标作助动词或系动词：帮助 working 构成时态、疑问或情态表达，不单独充当主要动作。 情态动词后通常用动词原形；could/would 在请求中常表示礼貌。",
+        "syntax": [
+          {
+            "start": 11,
+            "end": 15,
+            "lemma": "will",
+            "pos": "AUX",
+            "tag": "MD",
+            "dependency": "aux",
+            "head": 26
+          }
+        ]
+      },
+      {
+        "start": 16,
+        "end": 20,
+        "lemma": "have",
+        "explanation": "“have”在这里标作助动词或系动词：帮助 working 构成时态、疑问或情态表达，不单独充当主要动作。",
+        "syntax": [
+          {
+            "start": 16,
+            "end": 20,
+            "lemma": "have",
+            "pos": "AUX",
+            "tag": "VB",
+            "dependency": "aux",
+            "head": 26
+          }
+        ]
+      },
+      {
+        "start": 21,
+        "end": 25,
+        "lemma": "be",
+        "explanation": "“been”在这里标作助动词或系动词：帮助 working 构成时态、疑问或情态表达，不单独充当主要动作。 这是过去分词形式，可用于完成、被动或修饰；具体看周围结构。",
+        "syntax": [
+          {
+            "start": 21,
+            "end": 25,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBN",
+            "dependency": "aux",
+            "head": 26
+          }
+        ]
+      },
+      {
+        "start": 26,
+        "end": 33,
+        "lemma": "work",
+        "explanation": "“working”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里与 be 搭配构成进行时。",
+        "syntax": [
+          {
+            "start": 26,
+            "end": 33,
+            "lemma": "work",
+            "pos": "VERB",
+            "tag": "VBG",
+            "dependency": "ROOT",
+            "head": 26
+          }
+        ]
+      },
+      {
+        "start": 34,
+        "end": 38,
+        "lemma": "here",
+        "explanation": "“here”在这里标作副词：修饰 working，补充程度、方式、时间或范围。",
+        "syntax": [
+          {
+            "start": 34,
+            "end": 38,
+            "lemma": "here",
+            "pos": "ADV",
+            "tag": "RB",
+            "dependency": "advmod",
+            "head": 26
+          }
+        ]
+      },
+      {
+        "start": 39,
+        "end": 42,
+        "lemma": "for",
+        "explanation": "“for”在这里标作介词：引出与 working 有关的介词短语，后面通常接名词或 -ing 形式。",
+        "syntax": [
+          {
+            "start": 39,
+            "end": 42,
+            "lemma": "for",
+            "pos": "ADP",
+            "tag": "IN",
+            "dependency": "prep",
+            "head": 26
+          }
+        ]
+      },
+      {
+        "start": 43,
+        "end": 44,
+        "lemma": "a",
+        "explanation": "“a”在这里标作限定词：限定 year 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 43,
+            "end": 44,
+            "lemma": "a",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 45
+          }
+        ]
+      },
+      {
+        "start": 45,
+        "end": 49,
+        "lemma": "year",
+        "explanation": "“year”在这里标作名词：接在介词 for 后面，补充这个介词连接的对象。",
+        "syntax": [
+          {
+            "start": 45,
+            "end": 49,
+            "lemma": "year",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "pobj",
+            "head": 39
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "If it rains, we will stay inside.",
+    "expected": "will 将来表达",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 2,
+        "lemma": "if",
+        "explanation": "“If”在这里标作从属连词：引出以 rains 为核心的从句，说明条件、时间、原因等关系。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 2,
+            "lemma": "if",
+            "pos": "SCONJ",
+            "tag": "IN",
+            "dependency": "mark",
+            "head": 6
+          }
+        ]
+      },
+      {
+        "start": 3,
+        "end": 5,
+        "lemma": "it",
+        "explanation": "“it”在这里标作代词：是 rains 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 3,
+            "end": 5,
+            "lemma": "it",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 6
+          }
+        ]
+      },
+      {
+        "start": 6,
+        "end": 11,
+        "lemma": "rain",
+        "explanation": "“rains”在这里标作动词：所在分句补充 stay 的时间、原因、条件或结果。 第三人称单数主语配合现在时单数动词形式。",
+        "syntax": [
+          {
+            "start": 6,
+            "end": 11,
+            "lemma": "rain",
+            "pos": "VERB",
+            "tag": "VBZ",
+            "dependency": "advcl",
+            "head": 21
+          }
+        ]
+      },
+      {
+        "start": 13,
+        "end": 15,
+        "lemma": "we",
+        "explanation": "“we”在这里标作代词：是 stay 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 13,
+            "end": 15,
+            "lemma": "we",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 21
+          }
+        ]
+      },
+      {
+        "start": 16,
+        "end": 20,
+        "lemma": "will",
+        "explanation": "“will”在这里标作助动词或系动词：帮助 stay 构成时态、疑问或情态表达，不单独充当主要动作。 情态动词后通常用动词原形；could/would 在请求中常表示礼貌。",
+        "syntax": [
+          {
+            "start": 16,
+            "end": 20,
+            "lemma": "will",
+            "pos": "AUX",
+            "tag": "MD",
+            "dependency": "aux",
+            "head": 21
+          }
+        ]
+      },
+      {
+        "start": 21,
+        "end": 25,
+        "lemma": "stay",
+        "explanation": "“stay”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。",
+        "syntax": [
+          {
+            "start": 21,
+            "end": 25,
+            "lemma": "stay",
+            "pos": "VERB",
+            "tag": "VB",
+            "dependency": "ROOT",
+            "head": 21
+          }
+        ]
+      },
+      {
+        "start": 26,
+        "end": 32,
+        "lemma": "inside",
+        "explanation": "“inside”在这里标作副词：修饰 stay，补充程度、方式、时间或范围。",
+        "syntax": [
+          {
+            "start": 26,
+            "end": 32,
+            "lemma": "inside",
+            "pos": "ADV",
+            "tag": "RB",
+            "dependency": "advmod",
+            "head": 21
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "This is the book that I bought yesterday.",
+    "expected": "一般现在时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 4,
+        "lemma": "this",
+        "explanation": "“This”在这里标作代词：是 is 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 4,
+            "lemma": "this",
+            "pos": "PRON",
+            "tag": "DT",
+            "dependency": "nsubj",
+            "head": 5
+          }
+        ]
+      },
+      {
+        "start": 5,
+        "end": 7,
+        "lemma": "be",
+        "explanation": "“is”在这里标作助动词或系动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 第三人称单数主语配合现在时单数动词形式。",
+        "syntax": [
+          {
+            "start": 5,
+            "end": 7,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBZ",
+            "dependency": "ROOT",
+            "head": 5
+          }
+        ]
+      },
+      {
+        "start": 8,
+        "end": 11,
+        "lemma": "the",
+        "explanation": "“the”在这里标作限定词：限定 book 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 8,
+            "end": 11,
+            "lemma": "the",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 12,
+        "end": 16,
+        "lemma": "book",
+        "explanation": "“book”在这里标作名词：接在 is 后作表语，补充主语的身份或特征。",
+        "syntax": [
+          {
+            "start": 12,
+            "end": 16,
+            "lemma": "book",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "attr",
+            "head": 5
+          }
+        ]
+      },
+      {
+        "start": 17,
+        "end": 21,
+        "lemma": "that",
+        "explanation": "“that”在这里标作代词：是 bought 的宾语，表示动作涉及的对象。",
+        "syntax": [
+          {
+            "start": 17,
+            "end": 21,
+            "lemma": "that",
+            "pos": "PRON",
+            "tag": "WDT",
+            "dependency": "dobj",
+            "head": 24
+          }
+        ]
+      },
+      {
+        "start": 22,
+        "end": 23,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 bought 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 22,
+            "end": 23,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 24
+          }
+        ]
+      },
+      {
+        "start": 24,
+        "end": 30,
+        "lemma": "buy",
+        "explanation": "“bought”在这里标作动词：所在关系从句修饰 book，说明具体是哪一个人或事物。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 24,
+            "end": 30,
+            "lemma": "buy",
+            "pos": "VERB",
+            "tag": "VBD",
+            "dependency": "relcl",
+            "head": 12
+          }
+        ]
+      },
+      {
+        "start": 31,
+        "end": 40,
+        "lemma": "yesterday",
+        "explanation": "“yesterday”在这里标作名词：为 bought 补充时间、距离或程度等信息。",
+        "syntax": [
+          {
+            "start": 31,
+            "end": 40,
+            "lemma": "yesterday",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "npadvmod",
+            "head": 24
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "I left after finishing my work.",
+    "expected": "一般过去时",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 1,
+        "lemma": "I",
+        "explanation": "“I”在这里标作代词：是 left 的主语，说明谁做这个动作或谁处于这种状态。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 1,
+            "lemma": "I",
+            "pos": "PRON",
+            "tag": "PRP",
+            "dependency": "nsubj",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "lemma": "leave",
+        "explanation": "“left”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 这里使用过去式，叙述过去的情况。",
+        "syntax": [
+          {
+            "start": 2,
+            "end": 6,
+            "lemma": "leave",
+            "pos": "VERB",
+            "tag": "VBD",
+            "dependency": "ROOT",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 7,
+        "end": 12,
+        "lemma": "after",
+        "explanation": "“after”在这里标作介词：引出与 left 有关的介词短语，后面通常接名词或 -ing 形式。",
+        "syntax": [
+          {
+            "start": 7,
+            "end": 12,
+            "lemma": "after",
+            "pos": "ADP",
+            "tag": "IN",
+            "dependency": "prep",
+            "head": 2
+          }
+        ]
+      },
+      {
+        "start": 13,
+        "end": 22,
+        "lemma": "finish",
+        "explanation": "“finishing”在这里标作动词：与 after 相连；这一处的具体关系需结合整句判断。 这里用 -ing 形式；不能仅凭 -ing 就判断为进行时。",
+        "syntax": [
+          {
+            "start": 13,
+            "end": 22,
+            "lemma": "finish",
+            "pos": "VERB",
+            "tag": "VBG",
+            "dependency": "pcomp",
+            "head": 7
+          }
+        ]
+      },
+      {
+        "start": 23,
+        "end": 25,
+        "lemma": "my",
+        "explanation": "“my”在这里标作代词：表示 work 的所属关系，也就是谁的 work。",
+        "syntax": [
+          {
+            "start": 23,
+            "end": 25,
+            "lemma": "my",
+            "pos": "PRON",
+            "tag": "PRP$",
+            "dependency": "poss",
+            "head": 26
+          }
+        ]
+      },
+      {
+        "start": 26,
+        "end": 30,
+        "lemma": "work",
+        "explanation": "“work”在这里标作名词：是 finishing 的宾语，表示动作涉及的对象。",
+        "syntax": [
+          {
+            "start": 26,
+            "end": 30,
+            "lemma": "work",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "dobj",
+            "head": 13
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "The car has been repaired.",
+    "expected": "现在完成时 · 被动语态",
+    "grammar": [
+      {
+        "start": 0,
+        "end": 3,
+        "lemma": "the",
+        "explanation": "“The”在这里标作限定词：限定 car 所指的人或物，说明是哪一个、多少或是否特指。",
+        "syntax": [
+          {
+            "start": 0,
+            "end": 3,
+            "lemma": "the",
+            "pos": "DET",
+            "tag": "DT",
+            "dependency": "det",
+            "head": 4
+          }
+        ]
+      },
+      {
+        "start": 4,
+        "end": 7,
+        "lemma": "car",
+        "explanation": "“car”在这里标作名词：是被动结构 repaired 的主语，表示承受动作的人或事物。",
+        "syntax": [
+          {
+            "start": 4,
+            "end": 7,
+            "lemma": "car",
+            "pos": "NOUN",
+            "tag": "NN",
+            "dependency": "nsubjpass",
+            "head": 17
+          }
+        ]
+      },
+      {
+        "start": 8,
+        "end": 11,
+        "lemma": "have",
+        "explanation": "“has”在这里标作助动词或系动词：帮助 repaired 构成时态、疑问或情态表达，不单独充当主要动作。 第三人称单数主语配合现在时单数动词形式。",
+        "syntax": [
+          {
+            "start": 8,
+            "end": 11,
+            "lemma": "have",
+            "pos": "AUX",
+            "tag": "VBZ",
+            "dependency": "aux",
+            "head": 17
+          }
+        ]
+      },
+      {
+        "start": 12,
+        "end": 16,
+        "lemma": "be",
+        "explanation": "“been”在这里标作助动词或系动词：与 repaired 的过去分词构成被动语态，主语承受动作。 这是过去分词形式，可用于完成、被动或修饰；具体看周围结构。",
+        "syntax": [
+          {
+            "start": 12,
+            "end": 16,
+            "lemma": "be",
+            "pos": "AUX",
+            "tag": "VBN",
+            "dependency": "auxpass",
+            "head": 17
+          }
+        ]
+      },
+      {
+        "start": 17,
+        "end": 25,
+        "lemma": "repair",
+        "explanation": "“repaired”在这里标作动词：是这一分句的核心，其他成分围绕它说明动作、状态或问题。 have/has/had + 过去分词构成完成时。",
+        "syntax": [
+          {
+            "start": 17,
+            "end": 25,
+            "lemma": "repair",
+            "pos": "VERB",
+            "tag": "VBN",
+            "dependency": "ROOT",
+            "head": 17
+          }
+        ]
+      }
+    ]
+  }
+]
