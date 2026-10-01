@@ -23,16 +23,16 @@ import kotlinx.coroutines.withContext
 fun WordContextSheet(sentence: String, offset: Int, speech: SpeechController,
                      onDismiss: () -> Unit, contextualMeaning: String = "",
                      grammar: List<GrammarToken> = emptyList(),
-                     onCollect: ((WordContext) -> Unit)? = null) {
+                     onCollect: ((WordContext) -> Unit)? = null, contextualPhonetic: String? = null) {
     val application = LocalContext.current.applicationContext
-    var context by remember(sentence, offset, contextualMeaning, grammar) { mutableStateOf<WordContext?>(null) }
+    var context by remember(sentence, offset, contextualMeaning, contextualPhonetic, grammar) { mutableStateOf<WordContext?>(null) }
     var guide by remember(sentence, grammar) { mutableStateOf<SentenceGuide?>(null) }
     var wordDetails by remember(sentence, offset) { mutableStateOf(false) }
-    LaunchedEffect(sentence, offset, contextualMeaning, grammar) {
+    LaunchedEffect(sentence, offset, contextualMeaning, contextualPhonetic, grammar) {
         // Core meanings/word audio are useful immediately. Do not hold the entire
         // sheet behind a cold load of both large supplementary assets.
         context = withContext(Dispatchers.Default) {
-            ContextDictionary.explain(sentence, offset, contextualMeaning, grammar)
+            ContextDictionary.explain(sentence, offset, contextualMeaning, grammar, contextualPhonetic = contextualPhonetic)
         }
         val annotations = if (grammar.isNotEmpty()) grammar else try { ContextGrammar.lookup(application, sentence) }
             catch (cancelled: CancellationException) { throw cancelled }
@@ -41,7 +41,7 @@ fun WordContextSheet(sentence: String, offset: Int, speech: SpeechController,
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { emptyMap() }
         val result = withContext(Dispatchers.Default) {
-            ContextDictionary.explain(sentence, offset, contextualMeaning, annotations, lexicon) to
+            ContextDictionary.explain(sentence, offset, contextualMeaning, annotations, lexicon, contextualPhonetic) to
                 SentenceGrammarGuide.explain(sentence, annotations)
         }
         guide = result.second

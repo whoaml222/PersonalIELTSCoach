@@ -7,6 +7,7 @@ import com.personalieltscoach.data.local.database.CoachDatabase
 import com.personalieltscoach.data.local.entity.WordSource
 import com.personalieltscoach.data.local.entity.WordItemEntity
 import com.personalieltscoach.data.seed.Nce1WordPack
+import com.personalieltscoach.data.seed.Nce2WordPack
 import com.personalieltscoach.domain.model.PlacementResult
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -95,6 +96,98 @@ class CoachRepositoryTest {
         assertEquals(30, migrated.targetCount)
         assertEquals(3, migrated.completedCount)
         assertFalse(migrated.completed)
+    }
+
+    @Test
+    fun aBatchFinishesBookOneThenImmediatelyContinuesBookTwoWithoutMasteryGate() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val bookOne = database.wordDao().getNewBySource(WordSource.NCE1, 2_000)
+        assertTrue(repository.newWords().all { it.source == WordSource.NCE1 })
+        database.openHelper.writableDatabase.execSQL("UPDATE words SET status = 'LEARNING' WHERE source = 'NCE1'")
+        bookOne.takeLast(2).forEach { database.wordDao().upsert(it) }
+
+        val batch = repository.newWords()
+        assertEquals(20, batch.size)
+        assertEquals(bookOne.takeLast(2).map { it.id }, batch.take(2).map { it.id })
+        assertTrue(batch.drop(2).all { it.source == WordSource.NCE2 })
+        assertEquals("private", batch[2].word)
+        batch.take(2).forEach { repository.answerWord(it, true, false) }
+        assertEquals("private", repository.newWords().first().word)
+        assertEquals(18, repository.newWords().size)
+        assertTrue(database.wordDao().observeAll().first().filter { it.source == WordSource.NCE1 }.all { it.status != "MASTERED" })
+    }
+
+    @Test
+    fun secondBookAlsoStopsAtTwentyThenAllowsExtraStudyAndHandlesExhaustion() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        database.openHelper.writableDatabase.execSQL("UPDATE words SET status = 'LEARNING' WHERE source = 'NCE1'")
+        val batch = repository.newWords()
+        assertTrue(batch.all { it.source == WordSource.NCE2 })
+        batch.forEach { repository.answerWord(it, true, false) }
+        assertTrue(repository.newWords().isEmpty())
+        val extra = repository.newWords(continueAfterGoal = true)
+        assertEquals(20, extra.size)
+        assertTrue(extra.none { next -> batch.any { it.id == next.id } })
+        assertEquals(20, database.planDao().getTask(CoachRepository.today(), "VOCAB_NEW")?.targetCount)
+        database.openHelper.writableDatabase.execSQL("UPDATE words SET status = 'LEARNING' WHERE source = 'NCE2'")
+        assertTrue(repository.newWords(continueAfterGoal = true).isEmpty())
+    }
+
+    @Test
+    fun bothNceBooksShareHalfTheReviewQuotaAndAreOrderedByDueDate() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val start = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val dao = database.wordDao()
+        for (source in listOf(WordSource.NCE1, WordSource.NCE2, WordSource.PAUL1000)) {
+            dao.getNewBySource(source, 10).forEach { word ->
+                dao.upsert(word.copy(status = "LEARNING", updatedAt = start - 2 * DAY_MS,
+                    nextReviewAt = if (source == WordSource.NCE2) start - DAY_MS else start))
+            }
+        }
+        val due = repository.dueWords(start + 1_000)
+        assertEquals(20, due.size)
+        assertEquals(10, due.count { WordSource.isNewConcept(it.source) })
+        assertEquals(10, due.count { it.source == WordSource.PAUL1000 })
+        assertEquals(WordSource.NCE2, due.first().source)
+        due.forEachIndexed { index, word -> assertEquals(if (index % 2 == 0) WordSource.NCE2 else WordSource.PAUL1000, word.source) }
+    }
+
+    @Test
+    fun bookTwoJoinsTomorrowReviewButIsNotRepeatedTodayOrWhileStillNew() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val word = database.wordDao().getNewBySource(WordSource.NCE2, 1).single()
+        repository.answerWord(word, true, false)
+        assertTrue(repository.dueWords().none { it.source == WordSource.NCE2 })
+        val next = database.wordDao().getById(word.id)!!
+        val tomorrowNoon = LocalDate.now().plusDays(1).atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val future = maxOf(tomorrowNoon, next.nextReviewAt)
+        assertEquals(listOf(word.id), repository.dueWords(future).filter { it.source == WordSource.NCE2 }.map { it.id })
+    }
+
+    @Test
+    fun addingBookTwoIsIdempotentAndPreservesProgressInBothBooksAndPaul() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val dao = database.wordDao()
+        val originals = listOf(WordSource.NCE1, WordSource.NCE2, WordSource.PAUL1000).map { source ->
+            dao.getNewBySource(source, 1).single().copy(status = "REVIEWING", correctStreak = 2,
+                wrongCount = 3, nextReviewAt = 123456L, lastWrongAt = 300L, createdAt = 100L, updatedAt = 500L)
+        }
+        originals.forEach { dao.upsert(it.copy(example = "Old example.")) }
+        val count = dao.count()
+        val task = database.planDao().getTask(CoachRepository.today(), "VOCAB_NEW")!!
+        database.planDao().upsertTask(task.copy(completedCount = 17, description = "旧版第一册计划"))
+        repeat(2) { repository.initializeIfNeeded() }
+        assertEquals(count, dao.count())
+        assertEquals(Nce2WordPack.UNIQUE_WORD_COUNT, dao.observeAll().first().count { it.source == WordSource.NCE2 })
+        originals.forEach { assertEquals(it, dao.getById(it.id)) }
+        val updatedTask = database.planDao().getTask(CoachRepository.today(), "VOCAB_NEW")!!
+        assertEquals(17, updatedTask.completedCount)
+        assertTrue(updatedTask.description.contains("第二册"))
     }
 
     @Test

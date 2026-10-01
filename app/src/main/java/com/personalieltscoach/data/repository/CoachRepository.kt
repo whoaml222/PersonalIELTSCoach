@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.personalieltscoach.data.local.database.CoachDatabase
 import com.personalieltscoach.data.local.entity.*
 import com.personalieltscoach.data.seed.Nce1WordPack
+import com.personalieltscoach.data.seed.Nce2WordPack
 import com.personalieltscoach.data.seed.Paul1000SentencePack
 import com.personalieltscoach.data.seed.SeedData
 import com.personalieltscoach.domain.model.PlacementResult
@@ -56,13 +57,14 @@ class CoachRepository(
         database.withTransaction {
             val now = System.currentTimeMillis()
             val nceWords = Nce1WordPack.words(now, emptyList())
+            val nce2Words = Nce2WordPack.words(now)
             val sentenceCards = Paul1000SentencePack.cards(now, nceWords)
             val paulWords = Paul1000SentencePack.words(now, nceWords)
             // INSERT IGNORE turns every app upgrade into an incremental content
             // merge. Existing progress is retained while newly bundled packs are
             // added to accounts that have already studied the original 100 words.
             database.wordDao().insertAll(
-                SeedData.words(now) + nceWords + paulWords
+                SeedData.words(now) + nceWords + paulWords + nce2Words
             )
             // If a learner already knew the same word in the original core pack,
             // do not show it again as a brand-new NCE word after upgrading.
@@ -73,14 +75,15 @@ class CoachRepository(
             // Content can improve independently from review progress. Update only
             // the bundled NCE fields, leaving ids, status, streaks, wrong answers,
             // review dates and timestamps untouched for existing learners.
-            nceWords.forEach { word ->
+            (nceWords + nce2Words).forEach { word ->
                 database.wordDao().updateNceLearningContent(
                     word = word.word,
                     phonetic = word.phonetic,
                     meaning = word.meaning,
                     example = word.example,
                     exampleTranslation = word.exampleTranslation,
-                    level = word.level
+                    level = word.level,
+                    source = word.source
                 )
             }
             paulWords.forEach { word ->
@@ -148,7 +151,7 @@ class CoachRepository(
             val newWordTask = database.planDao().getTask(date, "VOCAB_NEW")
             val paulWordTask = database.planDao().getTask(date, "SENTENCE_STUDY")
             val updatedNewWordTask = newWordTask?.copy(
-                description = "$NEW_WORD_DAILY_GOAL 个新概念英语1词汇，完成后可继续",
+                description = "$NEW_WORD_DAILY_GOAL 个新概念词汇，第一册后接第二册，可继续加学",
                 targetCount = NEW_WORD_DAILY_GOAL,
                 completed = newWordTask.completedCount >= NEW_WORD_DAILY_GOAL
             )
@@ -177,7 +180,7 @@ class CoachRepository(
         val now = System.currentTimeMillis()
         val tasks = listOf(
             StudyTaskEntity(date = date, type = "VOCAB_REVIEW", title = "复习旧单词", description = "$reviewTarget 个到期词：Paul1000与新概念各半", targetCount = reviewTarget),
-            StudyTaskEntity(date = date, type = "VOCAB_NEW", title = "学习新单词", description = "$NEW_WORD_DAILY_GOAL 个新概念英语1词汇，完成后可继续", targetCount = NEW_WORD_DAILY_GOAL),
+            StudyTaskEntity(date = date, type = "VOCAB_NEW", title = "学习新单词", description = "$NEW_WORD_DAILY_GOAL 个新概念词汇，第一册后接第二册，可继续加学", targetCount = NEW_WORD_DAILY_GOAL),
             StudyTaskEntity(date = date, type = "SENTENCE_STUDY", title = "Paul1000单词", description = "$PAUL_WORD_DAILY_GOAL 个高频词和真实口语例句，完成后可继续", targetCount = PAUL_WORD_DAILY_GOAL),
             StudyTaskEntity(date = date, type = "READING", title = "阅读短文", description = if (a1Plus) "阅读 100-200 词" else "阅读 50-100 词", targetCount = 1)
         )
@@ -203,7 +206,7 @@ class CoachRepository(
         val remainingGoal = (task.targetCount - task.completedCount).coerceAtLeast(0)
         val limit = if (remainingGoal > 0) remainingGoal else if (continueAfterGoal) EXTRA_WORD_BATCH else 0
         if (limit == 0) return emptyList()
-        return database.wordDao().getNewBySource(WordSource.NCE1, limit)
+        return database.wordDao().getNewConceptWords(limit)
     }
 
     suspend fun dueWords(now: Long = System.currentTimeMillis()): List<WordItemEntity> {
@@ -213,7 +216,7 @@ class CoachRepository(
         val start = dayStart(now)
         val nceTarget = (limit + 1) / 2
         val paulTarget = limit / 2
-        val nce = database.wordDao().getDueBySource(WordSource.NCE1, now, start, nceTarget)
+        val nce = database.wordDao().getDueNewConcept(now, start, nceTarget)
         val paul = database.wordDao().getDueBySource(WordSource.PAUL1000, now, start, paulTarget)
 
         val selected = interleave(nce, paul).toMutableList()
@@ -221,7 +224,7 @@ class CoachRepository(
         if (remaining > 0) {
             val selectedIds = selected.mapTo(mutableSetOf()) { it.id }
             val extraNce = database.wordDao()
-                .getDueBySource(WordSource.NCE1, now, start, limit)
+                .getDueNewConcept(now, start, limit)
                 .filterNot { it.id in selectedIds }
             val extraPaul = database.wordDao()
                 .getDueBySource(WordSource.PAUL1000, now, start, limit)

@@ -1,6 +1,19 @@
 package com.personalieltscoach.domain.service
 
+import com.personalieltscoach.data.local.entity.WordItemEntity
+
 object WordPresentation {
+    // A book-specific sense must not silently turn into the other book's sense
+    // when the learner taps its headword (e.g. NCE2 play = a theatre play).
+    // Multiword phrases are not applied to their individual component words.
+    fun contextMeanings(word: WordItemEntity): Map<String, String> =
+        if (ContextDictionary.tokens.matches(word.word)) mapOf(word.word.lowercase() to word.meaning)
+        else emptyMap()
+
+    fun contextPhonetics(word: WordItemEntity): Map<String, String> =
+        if (ContextDictionary.tokens.matches(word.word)) mapOf(word.word.lowercase() to word.phonetic)
+        else emptyMap()
+
     private val typeNames = linkedMapOf(
         "modal v." to "情态动词",
         "aux." to "助动词",

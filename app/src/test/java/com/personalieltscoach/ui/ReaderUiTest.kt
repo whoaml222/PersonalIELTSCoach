@@ -13,6 +13,9 @@ import com.personalieltscoach.ui.component.rememberSpeechController
 import com.personalieltscoach.ui.screen.ReadingScreen
 import com.personalieltscoach.ui.screen.FreeReadingScreen
 import com.personalieltscoach.ui.screen.HomeScreen
+import com.personalieltscoach.ui.screen.VocabularyScreen
+import com.personalieltscoach.data.local.entity.WordSource
+import com.personalieltscoach.domain.model.PlacementResult
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Rule
 import org.junit.rules.ExternalResource
@@ -92,6 +95,39 @@ class ReaderUiTest {
             dumpUi()
             throw error
         }
+    }
+
+    @Test fun vocabularyAutomaticallyShowsBookTwoAfterBookOneIsStudied() {
+        val coach = coach()
+        val app = compose.activity.application as CoachApplication
+        runBlocking {
+            app.container.coachRepository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+            app.container.database.openHelper.writableDatabase.execSQL("UPDATE words SET status = 'LEARNING' WHERE source = 'NCE1'")
+        }
+        compose.setContent { MaterialTheme { VocabularyScreen(coach) {} } }
+        awaitText("private")
+        compose.onNodeWithText("NCE2 Lesson 1").assertExists()
+        compose.onNodeWithText("已进入第二册 · 第一册旧词继续按计划复习").assertExists()
+        compose.onNodeWithText("新概念英语1词汇已学完").assertDoesNotExist()
+        compose.onNodeWithText("新概念英语2 · 已接触 0 / 851 个 · 离线内置").assertExists()
+    }
+
+    @Test fun vocabularyOffersExtraBookTwoWordsAfterTodaysTwenty() {
+        val coach = coach()
+        val app = compose.activity.application as CoachApplication
+        runBlocking {
+            app.container.coachRepository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+            val database = app.container.database
+            database.openHelper.writableDatabase.execSQL("UPDATE words SET status = 'LEARNING' WHERE source = 'NCE1'")
+            database.wordDao().getNewBySource(WordSource.NCE2, 20).forEach {
+                app.container.coachRepository.answerWord(it, true, false)
+            }
+        }
+        compose.setContent { MaterialTheme { VocabularyScreen(coach) {} } }
+        awaitText("今天的 20 个新词已完成")
+        compose.onNodeWithText("继续学习 20 个").performScrollTo().performClick()
+        awaitText("museum")
+        compose.onNodeWithText("正在加学 · 本批剩余 20 个").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun tappingSentenceWordOpensOfflineMeaningAndGrammar() {

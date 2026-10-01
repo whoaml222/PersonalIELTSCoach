@@ -190,7 +190,7 @@ fun SettingsScreen(
 
         SectionCard("学习设置") {
             NumberSetting("每日复习词数量", settings.dailyReviewWords, viewModel::setReviewWords)
-            Text("每日先学习 20 个新概念英语1词汇，完成后可自行继续。")
+            Text("每日先学习 20 个新概念词汇，完成后可自行继续。第一册学完自动接第二册，旧词继续复习。")
             Text("Paul1000 每日先学习 30 个高频词，完成后可自行继续。")
             Text("当前目标：IELTS 7.0")
             Text(

@@ -36,6 +36,18 @@ interface WordDao {
     @Query("SELECT * FROM words WHERE status = 'NEW' AND source = :source ORDER BY id LIMIT :limit")
     suspend fun getNewBySource(source: String, limit: Int): List<WordItemEntity>
 
+    // One ordered queue: a batch may finish Book 1 and immediately start Book 2.
+    @Query("SELECT * FROM words WHERE status = 'NEW' AND source IN ('NCE1', 'NCE2') " +
+        "ORDER BY CASE source WHEN 'NCE1' THEN 0 ELSE 1 END, id LIMIT :limit")
+    suspend fun getNewConceptWords(limit: Int): List<WordItemEntity>
+
+    // Both books share the NCE half of the review quota, ordered by due date.
+    @Query("SELECT * FROM words WHERE source IN ('NCE1', 'NCE2') " +
+        "AND status != 'NEW' AND status != 'MASTERED' " +
+        "AND nextReviewAt <= :now AND updatedAt < :dayStart " +
+        "ORDER BY nextReviewAt, updatedAt, id LIMIT :limit")
+    suspend fun getDueNewConcept(now: Long, dayStart: Long, limit: Int): List<WordItemEntity>
+
     @Query(
         "SELECT * FROM words " +
             "WHERE status != 'NEW' AND status != 'MASTERED' AND nextReviewAt <= :now " +
@@ -87,7 +99,7 @@ interface WordDao {
     @Query(
         "UPDATE words SET phonetic = :phonetic, meaning = :meaning, example = :example, " +
             "exampleTranslation = :exampleTranslation, level = :level " +
-            "WHERE LOWER(word) = LOWER(:word) AND source = 'NCE1' " +
+            "WHERE LOWER(word) = LOWER(:word) AND source = :source " +
             "AND (phonetic != :phonetic OR meaning != :meaning OR example != :example " +
             "OR exampleTranslation != :exampleTranslation OR level != :level)"
     )
@@ -97,7 +109,8 @@ interface WordDao {
         meaning: String,
         example: String,
         exampleTranslation: String,
-        level: String
+        level: String,
+        source: String = WordSource.NCE1
     ): Int
 
     @Query(

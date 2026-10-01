@@ -1,6 +1,7 @@
 package com.personalieltscoach.domain.service
 
 import com.personalieltscoach.data.seed.Nce1WordPack
+import com.personalieltscoach.data.seed.Nce2WordPack
 import com.personalieltscoach.data.seed.Paul1000SentencePack
 
 data class WordContext(
@@ -15,7 +16,9 @@ data class WordContext(
 /** Local, conservative explanations. Unknown senses are labelled, never guessed by a remote call. */
 object ContextDictionary {
     private val dictionary by lazy {
-        (Paul1000SentencePack.words(0) + Nce1WordPack.words(0))
+        // Fill gaps with Book 2 without replacing familiar Book 1 definitions.
+        // Vocabulary cards pass the current headword's own sense explicitly.
+        (Nce2WordPack.words(0) + Paul1000SentencePack.words(0) + Nce1WordPack.words(0))
             .map { LocalDefinition(it.word, it.meaning, it.phonetic) }.associateBy { it.word.lowercase() }
     }
     val tokens = Regex("[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['’-][A-Za-zÀ-ÖØ-öø-ÿ]+)*")
@@ -48,7 +51,7 @@ object ContextDictionary {
     )
 
     fun explain(sentence: String, offset: Int, contextualMeaning: String = "", grammar: List<GrammarToken> = emptyList(),
-                extraDictionary: Map<String, LocalDefinition> = emptyMap()): WordContext? {
+                extraDictionary: Map<String, LocalDefinition> = emptyMap(), contextualPhonetic: String? = null): WordContext? {
         val matches = tokens.findAll(sentence).toList()
         val index = matches.indexOfFirst { offset in it.range }
         if (index < 0) return null
@@ -121,6 +124,6 @@ object ContextDictionary {
         }
         if (notes.isEmpty()) notes += "先结合整句理解这个词与周围词语的搭配。当前离线规则尚未覆盖这一处的完整语法，下面的词库释义不代表所有义项都适用于本句。"
         if (meaning.isBlank()) meaning = "本地词库暂无可靠释义；不会自动联网或编造解释。"
-        return WordContext(word, entry?.word ?: word, entry?.phonetic.orEmpty(), meaning, notes.joinToString("\n\n"), exact)
+        return WordContext(word, entry?.word ?: word, contextualPhonetic ?: entry?.phonetic.orEmpty(), meaning, notes.joinToString("\n\n"), exact)
     }
 }

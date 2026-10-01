@@ -1,6 +1,7 @@
 package com.personalieltscoach.domain.service
 
 import com.personalieltscoach.data.seed.Nce1WordPack
+import com.personalieltscoach.data.seed.Nce2WordPack
 import com.personalieltscoach.data.seed.Paul1000SentencePack
 import com.personalieltscoach.data.seed.SeedData
 import kotlinx.serialization.json.Json
@@ -11,7 +12,7 @@ import java.io.File
 class OfflineAssetsTest {
     @Test fun shippedGrammarCoversEveryCurrentWordExampleWithValidTokenOffsets() {
         val grammar = Json.decodeFromString<Map<String, List<GrammarToken>>>(File("src/main/assets/context-grammar.json").readText())
-        val sentences = (Nce1WordPack.words(0) + Paul1000SentencePack.words(0) + SeedData.words(0)).map { it.example }.distinct()
+        val sentences = (Nce1WordPack.words(0) + Nce2WordPack.words(0) + Paul1000SentencePack.words(0) + SeedData.words(0)).map { it.example }.distinct()
         sentences.forEach { sentence ->
             val annotations = requireNotNull(grammar[sentence]) { "Missing offline grammar: $sentence" }
             val spans = ContextDictionary.tokens.findAll(sentence).map { it.range.first to it.range.last + 1 }.toSet()

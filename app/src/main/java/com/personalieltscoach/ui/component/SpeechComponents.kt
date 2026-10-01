@@ -285,6 +285,7 @@ fun SpokenEnglishText(
     wordColor: Color = MaterialTheme.colorScheme.primary,
     showHint: Boolean = false,
     contextMeanings: Map<String, String> = emptyMap(),
+    contextPhonetics: Map<String, String> = emptyMap(),
     grammar: List<com.personalieltscoach.domain.service.GrammarToken> = emptyList(),
     onCollect: ((com.personalieltscoach.domain.service.WordContext) -> Unit)? = null
 ) {
@@ -293,7 +294,8 @@ fun SpokenEnglishText(
     selectedOffset?.let { offset ->
         val selected = ENGLISH_WORD.findAll(text).firstOrNull { offset in it.range }?.value?.lowercase()
         WordContextSheet(text, offset, speech, onDismiss = { selectedOffset = null },
-            contextualMeaning = contextMeanings[selected].orEmpty(), grammar = grammar, onCollect = onCollect)
+            contextualMeaning = contextMeanings[selected].orEmpty(), contextualPhonetic = contextPhonetics[selected],
+            grammar = grammar, onCollect = onCollect)
     }
     Column(
         modifier = modifier.fillMaxWidth(),

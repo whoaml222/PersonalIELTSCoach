@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.personalieltscoach.data.local.entity.WordItemEntity
 import com.personalieltscoach.data.local.entity.WordSource
 import com.personalieltscoach.data.seed.Nce1WordPack
+import com.personalieltscoach.data.seed.Nce2WordPack
 import com.personalieltscoach.domain.service.WordPresentation
 import com.personalieltscoach.ui.CoachViewModel
 import com.personalieltscoach.ui.component.CoachScaffold
@@ -49,10 +50,19 @@ fun VocabularyScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
     LaunchedEffect(Unit) { viewModel.startNewWordSession() }
 
     CoachScaffold("学习新单词", onBack) {
+        val firstBookRemaining = allWords.any { it.source == WordSource.NCE1 && it.status == "NEW" }
+        val activeSource = word?.source ?: if (firstBookRemaining) WordSource.NCE1 else WordSource.NCE2
+        val activeTotal = if (activeSource == WordSource.NCE1) Nce1WordPack.UNIQUE_WORD_COUNT else Nce2WordPack.UNIQUE_WORD_COUNT
+        val activeStarted = allWords.count { it.source == activeSource && it.status != "NEW" }
         Text(
-            "新概念英语1 · ${Nce1WordPack.SOURCE_ENTRY_COUNT} 条课文词条 · " +
-                "${Nce1WordPack.UNIQUE_WORD_COUNT} 个去重词 · 离线内置",
+            "${WordSource.label(activeSource)} · 已接触 $activeStarted / $activeTotal 个 · 离线内置",
             style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            if (activeSource == WordSource.NCE1) "第一册学完自动接第二册 · 每日 20 个，可继续加学"
+            else "已进入第二册 · 第一册旧词继续按计划复习",
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         WordModeSelector(selected = mode, onSelected = { mode = it })
@@ -62,14 +72,14 @@ fun VocabularyScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
             }
         } else if (word == null) {
             val hasMoreNceWords = allWords.any {
-                it.source == WordSource.NCE1 && it.status == "NEW"
+                WordSource.isNewConcept(it.source) && it.status == "NEW"
             }
-            SectionCard(if (hasMoreNceWords) "今天的 20 个新词已完成" else "新概念英语1词汇已学完") {
+            SectionCard(if (hasMoreNceWords) "今天的 20 个新词已完成" else "新概念英语1、2词汇已学完") {
                 Text(
                     if (hasMoreNceWords) {
                         "今天的计划已经完成。继续学习不会增加今日目标，也可以明天再来。"
                     } else {
-                        "所有新概念英语1词汇都已接触，接下来按计划复习即可。"
+                        "两册词汇都已接触，接下来按计划复习，巩固记忆。"
                     }
                 )
                 if (hasMoreNceWords) {
@@ -198,7 +208,7 @@ private fun WordExerciseCard(
                     fontWeight = FontWeight.Bold
                 )
                 if (mode == WordMode.EN_TO_ZH) Text(word.phonetic)
-                if (word.level.startsWith("NCE1")) {
+                if (WordSource.isNewConcept(word.source)) {
                     Text(
                         word.level,
                         style = MaterialTheme.typography.labelMedium,
@@ -276,6 +286,8 @@ private fun WordExerciseCard(
             SpokenEnglishText(
                 text = word.example,
                 speech = speech,
+                contextMeanings = WordPresentation.contextMeanings(word),
+                contextPhonetics = WordPresentation.contextPhonetics(word),
                 showHint = true
             )
             Text(word.exampleTranslation, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -326,19 +338,19 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
         } else {
             SectionCard("先回忆，再看答案") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text(word.word, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                         Text(word.phonetic)
-                        if (word.level.startsWith("NCE1")) {
+                        if (WordSource.isNewConcept(word.source)) {
                             Text(
                                 word.level,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        if (word.source == WordSource.NCE1) {
+                        if (WordSource.isNewConcept(word.source)) {
                             Text(
-                                "来自新概念英语1",
+                                "来自${WordSource.label(word.source)}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -355,6 +367,8 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                 SpokenEnglishText(
                     text = word.example,
                     speech = speech,
+                    contextMeanings = WordPresentation.contextMeanings(word),
+                    contextPhonetics = WordPresentation.contextPhonetics(word),
                     showHint = true
                 )
                 if (showAnswer) {
@@ -402,7 +416,7 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                 }
             }
             Text(
-                "按最早到期顺序复习；有两类内容时，Paul1000词汇与新概念英语1词汇各占一半。",
+                "按最早到期顺序复习；两类内容充足时，Paul1000 与新概念（第一、二册合计）各占一半。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -431,6 +445,8 @@ fun WrongWordsScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                         SpokenEnglishText(
                             text = word.example,
                             speech = speech,
+                            contextMeanings = WordPresentation.contextMeanings(word),
+                            contextPhonetics = WordPresentation.contextPhonetics(word),
                             showHint = true
                         )
                         Text(word.exampleTranslation, color = MaterialTheme.colorScheme.onSurfaceVariant)

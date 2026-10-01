@@ -46,7 +46,17 @@ data class WordItemEntity(
 object WordSource {
     const val CORE = "CORE"
     const val NCE1 = "NCE1"
+    const val NCE2 = "NCE2"
     const val PAUL1000 = "PAUL1000"
+
+    fun isNewConcept(source: String): Boolean = source == NCE1 || source == NCE2
+
+    fun label(source: String): String = when (source) {
+        NCE1 -> "新概念英语1"
+        NCE2 -> "新概念英语2"
+        PAUL1000 -> "Paul1000单词"
+        else -> "基础词汇"
+    }
 }
 
 @Entity(tableName = "daily_plans", indices = [Index(value = ["date"], unique = true)])
