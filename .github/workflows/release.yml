@@ -58,7 +58,11 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew testDebugUnitTest lintDebug assembleRelease
+        # Cold offline-grammar loading in Robolectric should not compete with
+        # lint and both APK variants for the hosted runner's CPU and memory.
+        run: |
+          ./gradlew testDebugUnitTest --max-workers=2 --console=plain
+          ./gradlew lintDebug assembleRelease --max-workers=2 --console=plain
 
       - name: Publish GitHub Release
         if: steps.release.outputs.should_release == 'true'
