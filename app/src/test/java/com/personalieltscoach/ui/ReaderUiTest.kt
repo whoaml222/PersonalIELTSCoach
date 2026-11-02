@@ -155,7 +155,7 @@ class ReaderUiTest {
         compose.onNodeWithText("导入个人课程包").assertExists()
     }
 
-    @Test fun homeRemovesRetiredModulesButKeepsPaulAndReader() {
+    @Test fun homeReplacesPaulWithCet4AndKeepsReader() {
         val coach = coach()
         runBlocking { (compose.activity.application as CoachApplication).container.coachRepository
             .savePlacement(com.personalieltscoach.domain.model.PlacementResult("A0-A1", 300, "词汇", "基础路线")) }
@@ -163,8 +163,64 @@ class ReaderUiTest {
         awaitText("完成 0 / 4 项学习任务")
         compose.onNodeWithText("句子精读").assertDoesNotExist()
         compose.onNodeWithText("写作练习", substring = true).assertDoesNotExist()
-        compose.onNodeWithText("Paul1000单词").assertExists()
+        compose.onNodeWithText("四级词汇").assertExists()
+        compose.onNodeWithText("Paul1000单词", substring = true).assertDoesNotExist()
         compose.onNodeWithText("阅读器").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test fun cet4ShowsAWordAndItsExampleAndSavesOnlyOneAnswer() {
+        val coach = coach()
+        val container = (compose.activity.application as CoachApplication).container
+        runBlocking { container.coachRepository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线")) }
+        val first = runBlocking { container.coachRepository.cet4Words().first() }
+        compose.setContent { MaterialTheme { com.personalieltscoach.ui.screen.SentencePackScreen(coach) {} } }
+        awaitText("学习今日剩余 30 个")
+        compose.onNodeWithText("学习今日剩余 30 个").performScrollTo().performClick()
+        awaitText(first.word)
+        compose.onNodeWithContentDescription("朗读 ${first.word}").assertExists()
+        compose.onNodeWithText(first.example).assertExists()
+        compose.onNodeWithText("显示例句中文").performScrollTo().performClick()
+        compose.onNodeWithText(first.exampleTranslation).assertExists()
+        compose.onNodeWithText("记住了").performScrollTo().performClick()
+        awaitText("本批 2 / 30")
+        assertEquals(1, runBlocking { container.database.wordDao().getById(first.id)!!.correctStreak })
+        assertEquals(1, runBlocking { container.database.planDao().getTask(com.personalieltscoach.data.repository.CoachRepository.today(), "SENTENCE_STUDY")!!.completedCount })
+    }
+
+    @Test fun cet4OffersAnotherThirtyAfterDailyGoal() {
+        val coach = coach()
+        val container = (compose.activity.application as CoachApplication).container
+        runBlocking {
+            container.coachRepository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+            val task = container.database.planDao().getTask(com.personalieltscoach.data.repository.CoachRepository.today(), "SENTENCE_STUDY")!!
+            container.database.planDao().upsertTask(task.copy(completedCount = 30, completed = true))
+        }
+        compose.setContent { MaterialTheme { com.personalieltscoach.ui.screen.SentencePackScreen(coach) {} } }
+        awaitText("继续学习 30 个")
+        compose.onNodeWithText("继续学习 30 个").performScrollTo().performClick()
+        awaitText("本批 1 / 30")
+        assertEquals(30, coach.cet4Session.value.words.size)
+    }
+
+    @Test fun cet4WithoutExampleStillLearnsAndDoesNotShowEmptyAudioOrTranslation() {
+        val coach = coach()
+        val container = (compose.activity.application as CoachApplication).container
+        val word = runBlocking {
+            container.coachRepository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+            val missing = container.database.wordDao().getBySource(WordSource.CET4).first { it.example.isBlank() }
+            container.database.openHelper.writableDatabase.execSQL("UPDATE words SET status = 'LEARNING' WHERE source = 'CET4'")
+            container.database.wordDao().upsert(missing)
+            missing
+        }
+        compose.setContent { MaterialTheme { com.personalieltscoach.ui.screen.SentencePackScreen(coach) {} } }
+        awaitText("学习今日剩余 30 个")
+        compose.onNodeWithText("学习今日剩余 30 个").performScrollTo().performClick()
+        awaitText(word.word)
+        compose.onNodeWithText("此词暂未配例句，可先学习释义与发音。").assertExists()
+        compose.onNodeWithText("显示例句中文").assertDoesNotExist()
+        compose.onNodeWithContentDescription("朗读 ${word.word}").assertExists()
+        compose.onNodeWithText("记住了").performScrollTo().performClick()
+        awaitText("四级词汇已全部学完")
     }
 
     private fun retiredRouteReturnsHome(route: String) {

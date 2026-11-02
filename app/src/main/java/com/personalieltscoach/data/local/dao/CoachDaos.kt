@@ -36,6 +36,14 @@ interface WordDao {
     @Query("SELECT * FROM words WHERE status = 'NEW' AND source = :source ORDER BY id LIMIT :limit")
     suspend fun getNewBySource(source: String, limit: Int): List<WordItemEntity>
 
+    @Query("SELECT * FROM words WHERE source = :source ORDER BY id")
+    suspend fun getBySource(source: String): List<WordItemEntity>
+
+    // Keep the original ID, timestamps, wrong history and schedule during replacement.
+    @Query("UPDATE words SET source = 'CET4', word = :canonicalWord WHERE id = :id AND source = 'PAUL1000' " +
+        "AND NOT EXISTS (SELECT 1 FROM words target WHERE target.source = 'CET4' AND LOWER(target.word) = LOWER(:canonicalWord))")
+    suspend fun movePaulProgressToCet4(id: Long, canonicalWord: String): Int
+
     // One ordered queue: a batch may finish Book 1 and immediately start Book 2.
     @Query("SELECT * FROM words WHERE status = 'NEW' AND source IN ('NCE1', 'NCE2') " +
         "ORDER BY CASE source WHEN 'NCE1' THEN 0 ELSE 1 END, id LIMIT :limit")
@@ -71,7 +79,7 @@ interface WordDao {
 
     @Query(
         "SELECT * FROM words WHERE LOWER(word) = LOWER(:word) " +
-            "ORDER BY CASE source WHEN 'NCE1' THEN 0 WHEN 'PAUL1000' THEN 1 ELSE 2 END LIMIT 1"
+            "ORDER BY CASE source WHEN 'NCE1' THEN 0 WHEN 'CET4' THEN 1 WHEN 'NCE2' THEN 2 ELSE 3 END LIMIT 1"
     )
     suspend fun find(word: String): WordItemEntity?
 

@@ -11,7 +11,6 @@ import com.personalieltscoach.data.repository.CoachSettings
 import com.personalieltscoach.domain.model.*
 import com.personalieltscoach.domain.service.PlacementEvaluator
 import com.personalieltscoach.domain.service.SentencePackStats
-import com.personalieltscoach.domain.service.SentenceRating
 import com.personalieltscoach.update.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -27,10 +26,9 @@ data class AsyncResult<T>(
     val requestKey: String? = null
 )
 
-data class SentencePackSessionState(
+data class Cet4SessionState(
     val loading: Boolean = false,
-    val cards: List<SentenceCardEntity> = emptyList(),
-    val wordsByCardId: Map<String, WordItemEntity> = emptyMap(),
+    val words: List<WordItemEntity> = emptyList(),
     val initialCount: Int = 0,
     val continuing: Boolean = false,
     val answering: Boolean = false,
@@ -72,7 +70,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     val learningCount = combine(coach.learningCount, coach.reviewingCount) { a, b -> a + b }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     val wrongCount = coach.wrongCount.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-    val sentencePackStats = coach.sentencePackStats
+    val cet4Stats = coach.cet4Stats
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SentencePackStats())
 
     private val activityTotals = currentDate.flatMapLatest(coach::totals)
@@ -113,8 +111,8 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
     val connectionState = _connectionState.asStateFlow()
     private val _updateState = MutableStateFlow(UpdateUiState())
     val updateState = _updateState.asStateFlow()
-    private val _sentencePackSession = MutableStateFlow(SentencePackSessionState())
-    val sentencePackSession = _sentencePackSession.asStateFlow()
+    private val _cet4Session = MutableStateFlow(Cet4SessionState())
+    val cet4Session = _cet4Session.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -229,31 +227,29 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    private var paulSessionGeneration = 0L
-    fun startPaulWordSession(continueAfterGoal: Boolean = false) {
-        val generation = ++paulSessionGeneration
+    private var cet4SessionGeneration = 0L
+    fun startCet4Session(continueAfterGoal: Boolean = false) {
+        val generation = ++cet4SessionGeneration
         viewModelScope.launch {
-            _sentencePackSession.value = SentencePackSessionState(
+            _cet4Session.value = Cet4SessionState(
                 loading = true,
                 continuing = continueAfterGoal
             )
             runCatching {
-                val cards = coach.paulWordSession(continueAfterGoal)
-                cards to coach.paulWordsFor(cards)
+                coach.cet4Words(continueAfterGoal)
             }
-                .onSuccess { (cards, wordsByCardId) ->
-                    if (generation != paulSessionGeneration) return@onSuccess
-                    _sentencePackSession.value = SentencePackSessionState(
-                        cards = cards,
-                        wordsByCardId = wordsByCardId,
-                        initialCount = cards.size,
+                .onSuccess { words ->
+                    if (generation != cet4SessionGeneration) return@onSuccess
+                    _cet4Session.value = Cet4SessionState(
+                        words = words,
+                        initialCount = words.size,
                         continuing = continueAfterGoal,
-                        completed = cards.isEmpty()
+                        completed = words.isEmpty()
                     )
                 }
                 .onFailure { error ->
-                    if (generation != paulSessionGeneration) return@onFailure
-                    _sentencePackSession.value = SentencePackSessionState(
+                    if (generation != cet4SessionGeneration) return@onFailure
+                    _cet4Session.value = Cet4SessionState(
                         continuing = continueAfterGoal,
                         error = error.userMessage()
                     )
@@ -261,26 +257,26 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun rateCurrentPaulWord(rating: SentenceRating) {
-        val generation = paulSessionGeneration
-        val state = _sentencePackSession.value
-        val card = state.cards.firstOrNull() ?: return
+    fun answerCurrentCet4Word(correct: Boolean) {
+        val generation = cet4SessionGeneration
+        val state = _cet4Session.value
+        val word = state.words.firstOrNull() ?: return
         if (state.answering) return
-        _sentencePackSession.value = state.copy(answering = true, error = null)
+        _cet4Session.value = state.copy(answering = true, error = null)
         viewModelScope.launch {
-            runCatching { coach.answerSentence(card, rating) }
+            runCatching { coach.answerWord(word, correct, isReview = false) }
                 .onSuccess {
-                    if (generation != paulSessionGeneration) return@onSuccess
-                    val remaining = _sentencePackSession.value.cards.drop(1)
-                    _sentencePackSession.value = _sentencePackSession.value.copy(
-                        cards = remaining,
+                    if (generation != cet4SessionGeneration) return@onSuccess
+                    val remaining = _cet4Session.value.words.drop(1)
+                    _cet4Session.value = _cet4Session.value.copy(
+                        words = remaining,
                         answering = false,
                         completed = remaining.isEmpty()
                     )
                 }
                 .onFailure { error ->
-                    if (generation != paulSessionGeneration) return@onFailure
-                    _sentencePackSession.value = _sentencePackSession.value.copy(
+                    if (generation != cet4SessionGeneration) return@onFailure
+                    _cet4Session.value = _cet4Session.value.copy(
                         answering = false,
                         error = error.userMessage()
                     )
@@ -288,9 +284,9 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun closeSentencePackSession() {
-        paulSessionGeneration++
-        _sentencePackSession.value = SentencePackSessionState()
+    fun closeCet4Session() {
+        cet4SessionGeneration++
+        _cet4Session.value = Cet4SessionState()
     }
 
     fun saveSentence(sentence: String) {
@@ -458,7 +454,7 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
             _startupHasProfile.value = false
             _sentenceResult.value = AsyncResult()
             _writingResult.value = AsyncResult()
-            _sentencePackSession.value = SentencePackSessionState()
+            _cet4Session.value = Cet4SessionState()
             _continuingNewWords.value = false
             _message.value = "学习数据已清空"
             onDone()

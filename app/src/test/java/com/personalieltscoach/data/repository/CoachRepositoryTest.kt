@@ -74,7 +74,7 @@ class CoachRepositoryTest {
     }
 
     @Test
-    fun existingDailyPlanMigratesSentenceTaskToThirtyPaulWords() = runTest {
+    fun existingDailyPlanMigratesSentenceTaskToThirtyCet4Words() = runTest {
         repository.initializeIfNeeded()
         repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
         val date = CoachRepository.today()
@@ -92,7 +92,7 @@ class CoachRepositoryTest {
         repository.ensureTodayPlan()
 
         val migrated = requireNotNull(database.planDao().getTask(date, "SENTENCE_STUDY"))
-        assertEquals("Paul1000单词", migrated.title)
+        assertEquals("四级词汇", migrated.title)
         assertEquals(30, migrated.targetCount)
         assertEquals(3, migrated.completedCount)
         assertFalse(migrated.completed)
@@ -141,7 +141,7 @@ class CoachRepositoryTest {
         repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
         val start = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val dao = database.wordDao()
-        for (source in listOf(WordSource.NCE1, WordSource.NCE2, WordSource.PAUL1000)) {
+        for (source in listOf(WordSource.NCE1, WordSource.NCE2, WordSource.CET4)) {
             dao.getNewBySource(source, 10).forEach { word ->
                 dao.upsert(word.copy(status = "LEARNING", updatedAt = start - 2 * DAY_MS,
                     nextReviewAt = if (source == WordSource.NCE2) start - DAY_MS else start))
@@ -150,9 +150,9 @@ class CoachRepositoryTest {
         val due = repository.dueWords(start + 1_000)
         assertEquals(20, due.size)
         assertEquals(10, due.count { WordSource.isNewConcept(it.source) })
-        assertEquals(10, due.count { it.source == WordSource.PAUL1000 })
+        assertEquals(10, due.count { it.source == WordSource.CET4 })
         assertEquals(WordSource.NCE2, due.first().source)
-        due.forEachIndexed { index, word -> assertEquals(if (index % 2 == 0) WordSource.NCE2 else WordSource.PAUL1000, word.source) }
+        due.forEachIndexed { index, word -> assertEquals(if (index % 2 == 0) WordSource.NCE2 else WordSource.CET4, word.source) }
     }
 
     @Test
@@ -169,11 +169,11 @@ class CoachRepositoryTest {
     }
 
     @Test
-    fun addingBookTwoIsIdempotentAndPreservesProgressInBothBooksAndPaul() = runTest {
+    fun addingBookTwoIsIdempotentAndPreservesProgressInBothBooksAndCet4() = runTest {
         repository.initializeIfNeeded()
         repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
         val dao = database.wordDao()
-        val originals = listOf(WordSource.NCE1, WordSource.NCE2, WordSource.PAUL1000).map { source ->
+        val originals = listOf(WordSource.NCE1, WordSource.NCE2, WordSource.CET4).map { source ->
             dao.getNewBySource(source, 1).single().copy(status = "REVIEWING", correctStreak = 2,
                 wrongCount = 3, nextReviewAt = 123456L, lastWrongAt = 300L, createdAt = 100L, updatedAt = 500L)
         }
@@ -290,7 +290,7 @@ class CoachRepositoryTest {
     }
 
     @Test
-    fun dailyReviewBalancesPaulAndNceWordsWhenBothAreDue() = runTest {
+    fun dailyReviewBalancesCet4AndNceWordsWhenBothAreDue() = runTest {
         repository.initializeIfNeeded()
         repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
         val dayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -298,8 +298,8 @@ class CoachRepositoryTest {
         val candidates = listOf(
             requireNotNull(database.wordDao().findBySource("book", WordSource.NCE1)),
             requireNotNull(database.wordDao().findBySource("work", WordSource.NCE1)),
-            requireNotNull(database.wordDao().findBySource("ability", WordSource.PAUL1000)),
-            requireNotNull(database.wordDao().findBySource("about", WordSource.PAUL1000))
+            requireNotNull(database.wordDao().findBySource("ability", WordSource.CET4)),
+            requireNotNull(database.wordDao().findBySource("about", WordSource.CET4))
         )
         candidates.forEach { word ->
             database.wordDao().upsert(
@@ -311,28 +311,29 @@ class CoachRepositoryTest {
 
         assertEquals(4, due.size)
         assertEquals(2, due.count { it.source == WordSource.NCE1 })
-        assertEquals(2, due.count { it.source == WordSource.PAUL1000 })
+        assertEquals(2, due.count { it.source == WordSource.CET4 })
         assertEquals(
-            listOf(WordSource.NCE1, WordSource.PAUL1000, WordSource.NCE1, WordSource.PAUL1000),
+            listOf(WordSource.NCE1, WordSource.CET4, WordSource.NCE1, WordSource.CET4),
             due.map { it.source }
         )
     }
 
     @Test
-    fun studyingPaulSentenceAddsItsFocusWordToVocabularyReview() = runTest {
+    fun studyingCet4WordUsesTheSameRecordForReviewAndDoesNotConsumeNceGoal() = runTest {
         repository.initializeIfNeeded()
         repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
-        val card = repository.paulWordSession().first()
-        val focusWord = requireNotNull(com.personalieltscoach.data.seed.Paul1000SentencePack.focusWord(card.id))
-
-        repository.answerSentence(
-            card,
-            com.personalieltscoach.domain.service.SentenceRating.REMEMBERED
-        )
-
-        val word = requireNotNull(database.wordDao().findBySource(focusWord, WordSource.PAUL1000))
-        assertTrue(word.status != "NEW")
-        assertTrue(word.nextReviewAt > 0)
+        val word = repository.cet4Words().first()
+        repeat(2) { repository.answerWord(word, true, false) }
+        val learned = database.wordDao().getById(word.id)!!
+        assertEquals("LEARNING", learned.status)
+        assertEquals(1, learned.correctStreak)
+        assertEquals(1, database.planDao().getTask(CoachRepository.today(), "SENTENCE_STUDY")!!.completedCount)
+        assertEquals(0, database.planDao().getTask(CoachRepository.today(), "VOCAB_NEW")!!.completedCount)
+        assertTrue(repository.cet4Words().none { it.id == word.id })
+        assertTrue(repository.dueWords().none { it.id == word.id })
+        val tomorrow = maxOf(learned.nextReviewAt, LocalDate.now().plusDays(1).atTime(12, 0)
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        assertEquals(word.id, repository.dueWords(tomorrow).single().id)
     }
 
     @Test
@@ -368,39 +369,70 @@ class CoachRepositoryTest {
     }
 
     @Test
-    fun paulWordSessionStopsAtThirtyAndCanContinueWithAnotherBatch() = runTest {
+    fun cet4WordSessionStopsAtThirtyAndCanContinueWithAnotherBatch() = runTest {
         repository.initializeIfNeeded()
-        repository.savePlacement(
-            PlacementResult("A0-A1", 300, "词汇", "基础路线")
-        )
-        val cards = repository.paulWordSession()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val words = repository.cet4Words()
+        assertEquals(30, words.size)
+        assertTrue(words.all { it.source == WordSource.CET4 })
+        words.forEach { repository.answerWord(it, true, false) }
+        assertTrue(repository.cet4Words().isEmpty())
+        val task = database.planDao().getTask(CoachRepository.today(), "SENTENCE_STUDY")!!
+        assertEquals(30, task.completedCount)
+        assertEquals(30, task.targetCount)
+        val next = repository.cet4Words(continueAfterGoal = true)
+        assertEquals(30, next.size)
+        assertTrue(next.none { other -> words.any { it.id == other.id } })
+        next.forEach { repository.answerWord(it, false, false) }
+        assertEquals(60, database.planDao().getTask(CoachRepository.today(), "SENTENCE_STUDY")!!.completedCount)
+        assertEquals(30, database.planDao().getTask(CoachRepository.today(), "SENTENCE_STUDY")!!.targetCount)
+        assertTrue(repository.cet4Words(true).none { other -> (words + next).any { it.id == other.id } })
+        database.openHelper.writableDatabase.execSQL("UPDATE words SET status = 'LEARNING' WHERE source = 'CET4'")
+        assertTrue(repository.cet4Words(true).isEmpty())
+    }
 
-        assertEquals(30, cards.size)
-        assertEquals(
-            (1..30).map { "paul-${it.toString().padStart(4, '0')}" },
-            cards.map { it.id }
-        )
-        val wordsByCard = repository.paulWordsFor(cards)
-        assertEquals(30, wordsByCard.size)
-        assertTrue(wordsByCard.values.all { it.source == WordSource.PAUL1000 })
+    @Test fun cet4ReplacementPreservesLegacyIdsSchedulesAndSentenceHistory() = runTest {
+        val legacy = WordItemEntity(word = "english", phonetic = "/old/", meaning = "旧释义",
+            example = "Old example.", exampleTranslation = "旧例句", level = "Paul1000",
+            source = WordSource.PAUL1000, status = "REVIEWING", correctStreak = 2, wrongCount = 4,
+            nextReviewAt = 987654L, lastWrongAt = 888L, createdAt = 111L, updatedAt = 222L)
+        val legacyId = database.wordDao().insert(legacy)
+        val archived = legacy.copy(word = "legacy-only-token")
+        val archivedId = database.wordDao().insert(archived)
+        val card = com.personalieltscoach.data.seed.Paul1000SentencePack.cards(0).first()
+            .copy(status = "REVIEWING", correctStreak = 2, nextReviewAt = 333L)
+        database.sentenceCardDao().upsert(card)
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val task = database.planDao().getTask(CoachRepository.today(), "SENTENCE_STUDY")!!
+        database.planDao().upsertTask(task.copy(title = "Paul1000单词", completedCount = 17))
+        repeat(2) { repository.initializeIfNeeded() }
+        val migrated = database.wordDao().findBySource("English", WordSource.CET4)!!
+        assertEquals(legacyId, migrated.id)
+        assertEquals("English", migrated.word)
+        assertEquals(legacy.status, migrated.status)
+        assertEquals(legacy.correctStreak, migrated.correctStreak)
+        assertEquals(legacy.wrongCount, migrated.wrongCount)
+        assertEquals(legacy.nextReviewAt, migrated.nextReviewAt)
+        assertEquals(legacy.lastWrongAt, migrated.lastWrongAt)
+        assertEquals(legacy.createdAt, migrated.createdAt)
+        assertEquals(legacy.updatedAt, migrated.updatedAt)
+        assertEquals(archived.copy(id = archivedId), database.wordDao().getById(archivedId))
+        assertEquals(1, database.sentenceCardDao().count())
+        assertEquals(card, database.sentenceCardDao().getDue(Long.MAX_VALUE, Long.MAX_VALUE, 10).single())
+        assertEquals(4458, database.wordDao().getBySource(WordSource.CET4).size)
+        val updatedTask = database.planDao().getTask(CoachRepository.today(), "SENTENCE_STUDY")!!
+        assertEquals("四级词汇", updatedTask.title)
+        assertEquals(17, updatedTask.completedCount)
+        assertEquals(13, repository.cet4Words().size)
+        assertTrue(repository.dueWords().none { it.source == WordSource.PAUL1000 })
+    }
 
-        cards.forEach { card ->
-            repository.answerSentence(
-                card,
-                com.personalieltscoach.domain.service.SentenceRating.REMEMBERED
-            )
-        }
-
-        assertTrue(repository.paulWordSession().isEmpty())
-        assertEquals(
-            30,
-            database.planDao().getTask(CoachRepository.today(), "SENTENCE_STUDY")?.completedCount
-        )
-        val next = repository.paulWordSession(continueAfterGoal = true)
-        assertEquals(
-            (31..60).map { "paul-${it.toString().padStart(4, '0')}" },
-            next.map { it.id }
-        )
+    @Test fun freshInstallHasCet4ButNoPaulAssignmentsOrSentenceCards() = runTest {
+        repository.initializeIfNeeded()
+        assertEquals(4458, database.wordDao().getBySource(WordSource.CET4).size)
+        assertTrue(database.wordDao().getBySource(WordSource.PAUL1000).isEmpty())
+        assertEquals(0, database.sentenceCardDao().count())
     }
 
     @Test fun oldFiveTaskPlanRetiresWritingWithoutResettingCompletedLearning() = runTest {

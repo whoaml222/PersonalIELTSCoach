@@ -204,7 +204,7 @@ class CoachDatabaseMigrationTest {
             repository.initializeIfNeeded()
             oldWords.forEach { old ->
                 val actual = requireNotNull(migrated.wordDao().getById(old.id))
-                assertEquals(old.source, actual.source)
+                assertEquals(if (old.source == WordSource.PAUL1000) WordSource.CET4 else old.source, actual.source)
                 assertEquals(old.status, actual.status)
                 assertEquals(old.correctStreak, actual.correctStreak)
                 assertEquals(old.wrongCount, actual.wrongCount)

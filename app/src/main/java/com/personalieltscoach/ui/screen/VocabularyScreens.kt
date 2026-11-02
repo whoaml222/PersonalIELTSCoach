@@ -354,9 +354,9 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                        } else if (word.source == WordSource.PAUL1000) {
+                        } else if (word.source == WordSource.CET4) {
                             Text(
-                                "来自Paul1000单词",
+                                "来自四级词汇",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -364,20 +364,22 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                     }
                     SpeechButton(text = word.word, speech = speech, contentDescription = "朗读 ${word.word}")
                 }
-                SpokenEnglishText(
-                    text = word.example,
-                    speech = speech,
-                    contextMeanings = WordPresentation.contextMeanings(word),
-                    contextPhonetics = WordPresentation.contextPhonetics(word),
-                    showHint = true
-                )
+                if (word.example.isNotBlank()) {
+                    SpokenEnglishText(
+                        text = word.example,
+                        speech = speech,
+                        contextMeanings = WordPresentation.contextMeanings(word),
+                        contextPhonetics = WordPresentation.contextPhonetics(word),
+                        showHint = true
+                    )
+                }
                 if (showAnswer) {
                     HorizontalDivider()
                     Text(
                         WordPresentation.meaningWithChineseType(word.meaning),
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Text(word.exampleTranslation)
+                    if (word.exampleTranslation.isNotBlank()) Text(word.exampleTranslation)
                     if (result == null) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             OutlinedButton(
@@ -416,7 +418,7 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                 }
             }
             Text(
-                "按最早到期顺序复习；两类内容充足时，Paul1000 与新概念（第一、二册合计）各占一半。",
+                "按最早到期顺序复习；两类内容充足时，四级词汇与新概念（第一、二册合计）各占一半。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -439,6 +441,7 @@ fun WrongWordsScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
             ElevatedCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("${word.word}  ${word.phonetic}", style = MaterialTheme.typography.titleLarge)
+                    Text(WordSource.label(word.source), style = MaterialTheme.typography.labelMedium)
                     Text(WordPresentation.meaningWithChineseType(word.meaning))
                     Text("错误 ${word.wrongCount} 次", color = MaterialTheme.colorScheme.error)
                     if (word.example.isNotBlank()) {

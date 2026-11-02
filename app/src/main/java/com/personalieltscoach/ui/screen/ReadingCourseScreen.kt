@@ -212,7 +212,7 @@ private fun ReadingVocabularyScreen(reader: ReaderViewModel, onBack: () -> Unit)
     val word = (if (learnNew) fresh else due).firstOrNull()
     var stage by remember(word?.id, learnNew) { mutableIntStateOf(if (learnNew) 0 else 1) }
     CoachScaffold("阅读生词", onBack) {
-        Text("独立复习，不占新概念与 Paul1000 的各半名额。")
+        Text("独立复习，不占新概念与 四级词汇 的各半名额。")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(!learnNew, { learnNew = false }, label = { Text("到期复习 ${due.size}") })
             FilterChip(learnNew, { learnNew = true }, label = { Text("待学 ${fresh.size}") })

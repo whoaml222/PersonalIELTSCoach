@@ -140,7 +140,7 @@ fun HomeScreen(viewModel: CoachViewModel, navigate: (String) -> Unit) {
 
         Text("专项练习", style = MaterialTheme.typography.titleLarge)
         val buttons = listOf(
-            Triple("Paul1000单词", Icons.Default.Bolt, Routes.SentencePack),
+            Triple("四级词汇", Icons.Default.Bolt, Routes.SentencePack),
             Triple("单词复习", Icons.Default.Refresh, Routes.Review),
             Triple("阅读器", Icons.AutoMirrored.Filled.Article, Routes.Reading),
             Triple("错词本", Icons.Default.ErrorOutline, Routes.WrongWords),

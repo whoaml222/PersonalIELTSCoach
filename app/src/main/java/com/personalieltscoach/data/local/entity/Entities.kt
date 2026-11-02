@@ -48,13 +48,15 @@ object WordSource {
     const val NCE1 = "NCE1"
     const val NCE2 = "NCE2"
     const val PAUL1000 = "PAUL1000"
+    const val CET4 = "CET4"
 
     fun isNewConcept(source: String): Boolean = source == NCE1 || source == NCE2
 
     fun label(source: String): String = when (source) {
         NCE1 -> "新概念英语1"
         NCE2 -> "新概念英语2"
-        PAUL1000 -> "Paul1000单词"
+        CET4 -> "四级词汇"
+        PAUL1000 -> "旧词库记录"
         else -> "基础词汇"
     }
 }

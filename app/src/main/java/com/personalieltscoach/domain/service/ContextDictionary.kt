@@ -1,6 +1,7 @@
 package com.personalieltscoach.domain.service
 
 import com.personalieltscoach.data.seed.Nce1WordPack
+import com.personalieltscoach.data.seed.Cet4WordPack
 import com.personalieltscoach.data.seed.Nce2WordPack
 import com.personalieltscoach.data.seed.Paul1000SentencePack
 
@@ -18,7 +19,7 @@ object ContextDictionary {
     private val dictionary by lazy {
         // Fill gaps with Book 2 without replacing familiar Book 1 definitions.
         // Vocabulary cards pass the current headword's own sense explicitly.
-        (Nce2WordPack.words(0) + Paul1000SentencePack.words(0) + Nce1WordPack.words(0))
+        (Cet4WordPack.words(0) + Nce2WordPack.words(0) + Paul1000SentencePack.words(0) + Nce1WordPack.words(0))
             .map { LocalDefinition(it.word, it.meaning, it.phonetic) }.associateBy { it.word.lowercase() }
     }
     val tokens = Regex("[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['’-][A-Za-zÀ-ÖØ-öø-ÿ]+)*")
