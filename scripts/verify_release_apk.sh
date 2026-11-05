@@ -12,12 +12,15 @@ test -s "$apk"
 test -n "$expected_version"
 test -n "$expected_code"
 test -d "$sdk/build-tools"
-build_tools=$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+# Match this app's Android build tools rather than a newly preinstalled preview.
+build_tools="$sdk/build-tools/34.0.0"
 test -x "$build_tools/apksigner"
 test -x "$build_tools/aapt"
 
 signature=$("$build_tools/apksigner" verify --verbose --print-certs "$apk")
 certificate=$(printf '%s\n' "$signature" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+echo "APK_OBSERVED_CERTIFICATE_SHA256=$certificate"
+echo "APK_SIGNER_TOOL=$build_tools/apksigner"
 if [[ "$certificate" != "$expected_certificate" ]]; then
   echo "Release signing certificate does not match the installed-release baseline." >&2
   exit 1
