@@ -42,6 +42,22 @@ class LearningLogicTest {
         assertEquals(0, result.wrongCount)
     }
 
+    @Test fun hintAssistedRecognitionDoesNotBecomeMasteryOrAMistake() {
+        val now = 1_700_000_000_000L
+        val assisted = ReviewScheduler.next(true, 3, 2, now, independentRecall = false)
+        assertEquals("LEARNING", assisted.status)
+        assertEquals(0, assisted.correctStreak)
+        assertEquals(2, assisted.wrongCount)
+        assertEquals(ReviewScheduler.next(false, 3, 2, now).nextReviewAt, assisted.nextReviewAt)
+    }
+
+    @Test fun incorrectHintedAnswerStillRecordsARealMistake() {
+        val result = ReviewScheduler.next(false, 3, 2, independentRecall = false)
+        assertEquals("WRONG", result.status)
+        assertEquals(0, result.correctStreak)
+        assertEquals(3, result.wrongCount)
+    }
+
     @Test
     fun readingTextSplitsLocally() {
         val sentences = TextSegmenter.sentences("I read books. It makes me happy! Do you read?")

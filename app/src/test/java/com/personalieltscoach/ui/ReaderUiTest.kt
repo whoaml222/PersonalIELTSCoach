@@ -106,6 +106,9 @@ class ReaderUiTest {
         }
         compose.setContent { MaterialTheme { VocabularyScreen(coach) {} } }
         awaitText("private")
+        compose.onNodeWithText("想不起来，看中文选项").assertExists()
+        val privateWord = runBlocking { app.container.database.wordDao().findBySource("private", WordSource.NCE2)!! }
+        compose.onNodeWithText(com.personalieltscoach.domain.service.WordPresentation.meaningWithChineseType(privateWord.meaning)).assertDoesNotExist()
         compose.onNodeWithText("NCE2 Lesson 1").assertExists()
         compose.onNodeWithText("已进入第二册 · 第一册旧词继续按计划复习").assertExists()
         compose.onNodeWithText("新概念英语1词汇已学完").assertDoesNotExist()
@@ -179,9 +182,15 @@ class ReaderUiTest {
         awaitText(first.word)
         compose.onNodeWithContentDescription("朗读 ${first.word}").assertExists()
         compose.onNodeWithText(first.example).assertExists()
-        compose.onNodeWithText("显示例句中文").performScrollTo().performClick()
+        compose.onNodeWithText(com.personalieltscoach.domain.service.WordPresentation.meaningWithChineseType(first.meaning)).assertDoesNotExist()
+        compose.onNodeWithText("想起来了，核对意思").performScrollTo().performClick()
         compose.onNodeWithText(first.exampleTranslation).assertExists()
-        compose.onNodeWithText("记住了").performScrollTo().performClick()
+        compose.onNodeWithText("我想对了").performScrollTo().performClick()
+        awaitText("独立回忆正确，已安排下一次间隔复习。")
+        compose.onNodeWithText("下一个单词").assertDoesNotExist()
+        compose.onNodeWithText("遮住中文，再回忆一次").performScrollTo().performClick()
+        compose.onNodeWithText(first.exampleTranslation).assertDoesNotExist()
+        compose.onNodeWithText("下一个单词").performScrollTo().performClick()
         awaitText("本批 2 / 30")
         assertEquals(1, runBlocking { container.database.wordDao().getById(first.id)!!.correctStreak })
         assertEquals(1, runBlocking { container.database.planDao().getTask(com.personalieltscoach.data.repository.CoachRepository.today(), "SENTENCE_STUDY")!!.completedCount })
@@ -202,6 +211,57 @@ class ReaderUiTest {
         assertEquals(30, coach.cet4Session.value.words.size)
     }
 
+    @Test fun newConceptHintedChoiceCountsStudyButNotIndependentMastery() {
+        val coach = coach()
+        val container = (compose.activity.application as CoachApplication).container
+        val word = runBlocking {
+            container.coachRepository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+            container.coachRepository.newWords().first()
+        }
+        val meaning = com.personalieltscoach.domain.service.WordPresentation.meaningWithChineseType(word.meaning)
+        compose.setContent { MaterialTheme { VocabularyScreen(coach) {} } }
+        awaitText(word.word)
+        compose.onNodeWithText(meaning).assertDoesNotExist()
+        compose.onNodeWithText("想不起来，看中文选项").performScrollTo().performClick()
+        compose.onNodeWithText(meaning).performScrollTo().performClick()
+        awaitText("提示后认对了，明天再独立回忆；这次不计入独立掌握。")
+        val saved = runBlocking { container.database.wordDao().getById(word.id)!! }
+        assertEquals(0, saved.correctStreak)
+        assertEquals(word.wrongCount, saved.wrongCount)
+        compose.onNodeWithText("遮住中文，再回忆一次").performScrollTo().performClick()
+        compose.onNodeWithText(meaning).assertDoesNotExist()
+        compose.onNodeWithText("下一个单词").performScrollTo().performClick()
+        awaitText("今日计划剩余 19 个")
+    }
+
+    @Test fun reviewStartsConcealedAndHintCannotPromoteAWordToMastered() {
+        val coach = coach()
+        val container = (compose.activity.application as CoachApplication).container
+        val word = runBlocking {
+            container.coachRepository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+            val due = container.database.wordDao().getBySource(WordSource.CET4).first()
+                .copy(status = "REVIEWING", correctStreak = 3, wrongCount = 2, nextReviewAt = 1,
+                    updatedAt = System.currentTimeMillis() - 2 * 86_400_000L)
+            container.database.wordDao().upsert(due)
+            due
+        }
+        val meaning = com.personalieltscoach.domain.service.WordPresentation.meaningWithChineseType(word.meaning)
+        compose.setContent { MaterialTheme { com.personalieltscoach.ui.screen.ReviewScreen(coach) {} } }
+        awaitText(word.word)
+        compose.onNodeWithText(meaning).assertDoesNotExist()
+        compose.onNodeWithText("想不起来，看中文选项").performScrollTo().performClick()
+        compose.onNodeWithText(meaning).performScrollTo().performClick()
+        awaitText("提示后认对了，明天再独立回忆；这次不计入独立掌握。")
+        val saved = runBlocking { container.database.wordDao().getById(word.id)!! }
+        assertEquals("LEARNING", saved.status)
+        assertEquals(0, saved.correctStreak)
+        assertEquals(2, saved.wrongCount)
+        compose.onNodeWithText("遮住中文，再回忆一次").performScrollTo().performClick()
+        compose.onNodeWithText(meaning).assertDoesNotExist()
+        compose.onNodeWithText("下一个单词").performScrollTo().performClick()
+        awaitText("复习已完成")
+    }
+
     @Test fun cet4WithoutExampleStillLearnsAndDoesNotShowEmptyAudioOrTranslation() {
         val coach = coach()
         val container = (compose.activity.application as CoachApplication).container
@@ -216,10 +276,14 @@ class ReaderUiTest {
         awaitText("学习今日剩余 30 个")
         compose.onNodeWithText("学习今日剩余 30 个").performScrollTo().performClick()
         awaitText(word.word)
-        compose.onNodeWithText("此词暂未配例句，可先学习释义与发音。").assertExists()
+        compose.onNodeWithText("此词暂未配例句，可先回忆意思，再听单词发音。").assertExists()
         compose.onNodeWithText("显示例句中文").assertDoesNotExist()
         compose.onNodeWithContentDescription("朗读 ${word.word}").assertExists()
-        compose.onNodeWithText("记住了").performScrollTo().performClick()
+        compose.onNodeWithText("想起来了，核对意思").performScrollTo().performClick()
+        compose.onNodeWithText("我想对了").performScrollTo().performClick()
+        awaitText("独立回忆正确，已安排下一次间隔复习。")
+        compose.onNodeWithText("遮住中文，再回忆一次").performScrollTo().performClick()
+        compose.onNodeWithText("下一个单词").performScrollTo().performClick()
         awaitText("四级词汇已全部学完")
     }
 

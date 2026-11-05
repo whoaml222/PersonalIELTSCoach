@@ -64,6 +64,10 @@ jobs:
           ./gradlew testDebugUnitTest --max-workers=2 --console=plain
           ./gradlew lintDebug assembleRelease --max-workers=2 --console=plain
 
+      - name: Verify signed APK before publication
+        if: steps.release.outputs.should_release == 'true'
+        run: bash scripts/verify_release_apk.sh
+
       - name: Publish GitHub Release
         if: steps.release.outputs.should_release == 'true'
         env:

@@ -39,13 +39,24 @@ object ReviewScheduler {
         correct: Boolean,
         currentStreak: Int,
         wrongCount: Int,
-        now: Long = System.currentTimeMillis()
+        now: Long = System.currentTimeMillis(),
+        independentRecall: Boolean = true
     ): ReviewUpdate {
         if (!correct) {
             return ReviewUpdate(
                 status = "WRONG",
                 correctStreak = 0,
                 wrongCount = wrongCount + 1,
+                nextReviewAt = startOfDay(now) + DAY_MS
+            )
+        }
+        // Recognising a supplied translation is useful practice, not an
+        // independent recall. Retest tomorrow without falsely adding a mistake.
+        if (!independentRecall) {
+            return ReviewUpdate(
+                status = "LEARNING",
+                correctStreak = 0,
+                wrongCount = wrongCount,
                 nextReviewAt = startOfDay(now) + DAY_MS
             )
         }

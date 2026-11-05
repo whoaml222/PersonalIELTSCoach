@@ -30,6 +30,7 @@ import com.personalieltscoach.ui.component.SpeechController
 import com.personalieltscoach.ui.component.SpeechButton
 import com.personalieltscoach.ui.component.SpokenEnglishText
 import com.personalieltscoach.ui.component.rememberSpeechController
+import com.personalieltscoach.ui.component.VocabularyRecallCard
 
 private enum class WordMode(val label: String) {
     EN_TO_ZH("英文选中文"),
@@ -97,12 +98,13 @@ fun VocabularyScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                 mode = mode,
                 allWords = allWords,
                 speech = speech,
-                answer = { correct, saved ->
+                answer = { correct, independent, saved ->
                     viewModel.answerWord(
                         word = word,
                         correct = correct,
                         review = false,
                         reloadSession = false,
+                        independentRecall = independent,
                         onSaved = saved
                     )
                 },
@@ -162,29 +164,26 @@ private fun WordExerciseCard(
     mode: WordMode,
     allWords: List<WordItemEntity>,
     speech: SpeechController,
-    answer: (Boolean, (Boolean) -> Unit) -> Unit,
+    answer: (Boolean, Boolean, (Boolean) -> Unit) -> Unit,
     onNext: () -> Unit
 ) {
+    if (mode == WordMode.EN_TO_ZH) {
+        VocabularyRecallCard(
+            word = word, allWords = allWords, speech = speech,
+            answer = answer,
+            onNext = onNext
+        )
+        return
+    }
     var input by remember(word.id, mode) { mutableStateOf("") }
     var revealed by remember(word.id, mode) { mutableStateOf(false) }
     var result by remember(word.id, mode) { mutableStateOf<Boolean?>(null) }
-    var selectedOption by remember(word.id, mode) { mutableStateOf<String?>(null) }
     var saving by remember(word.id, mode) { mutableStateOf(false) }
-    val options = remember(word.id, allWords.size) {
-        val distractors = allWords.asSequence()
-            .filter { it.id != word.id && it.meaning != word.meaning }
-            .map { it.meaning }
-            .distinct()
-            .toList()
-            .shuffled()
-            .take(3)
-        (distractors + word.meaning).shuffled()
-    }
     fun submit(correct: Boolean) {
         if (result != null || saving) return
         revealed = true
         saving = true
-        answer(correct) { saved ->
+        answer(correct, true) { saved ->
             saving = false
             if (saved) result = correct
         }
@@ -219,21 +218,7 @@ private fun WordExerciseCard(
             SpeechButton(text = word.word, speech = speech, contentDescription = "朗读 ${word.word}")
         }
         when (mode) {
-            WordMode.EN_TO_ZH -> options.forEach { option ->
-                OutlinedButton(
-                    onClick = {
-                        selectedOption = option
-                        submit(option == word.meaning)
-                    },
-                    enabled = result == null && !revealed,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        WordPresentation.meaningWithChineseType(option),
-                        fontWeight = if (selectedOption == option) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-            }
+            WordMode.EN_TO_ZH -> Unit // Handled by the recall-first card above.
             WordMode.ZH_TO_EN -> {
                 OutlinedTextField(
                     value = input,
@@ -317,11 +302,9 @@ private fun WordExerciseCard(
 @Composable
 fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
     val words by viewModel.dueWords.collectAsStateWithLifecycle()
+    val allWords by viewModel.allWords.collectAsStateWithLifecycle()
     val loading by viewModel.dueWordsLoading.collectAsStateWithLifecycle()
     val word = words.firstOrNull()
-    var showAnswer by remember(word?.id) { mutableStateOf(false) }
-    var result by remember(word?.id) { mutableStateOf<Boolean?>(null) }
-    var saving by remember(word?.id) { mutableStateOf(false) }
     val speech = rememberSpeechController()
 
     LaunchedEffect(Unit) { viewModel.loadDueWords() }
@@ -333,90 +316,17 @@ fun ReviewScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
             }
         } else if (word == null) {
             SectionCard("复习已完成") {
-                Text("目前没有到期单词。昨天、前天学过但尚未完成的词会自动保留；新词会按照 1、3、7 天的节奏回来。")
+                Text("目前没有到期单词。昨天、前天学过但尚未完成的词会自动保留；提示后认出的词明天再测，独立回忆的词按间隔安排。")
             }
         } else {
-            SectionCard("先回忆，再看答案") {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column(Modifier.weight(1f)) {
-                        Text(word.word, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                        Text(word.phonetic)
-                        if (WordSource.isNewConcept(word.source)) {
-                            Text(
-                                word.level,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (WordSource.isNewConcept(word.source)) {
-                            Text(
-                                "来自${WordSource.label(word.source)}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        } else if (word.source == WordSource.CET4) {
-                            Text(
-                                "来自四级词汇",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    SpeechButton(text = word.word, speech = speech, contentDescription = "朗读 ${word.word}")
-                }
-                if (word.example.isNotBlank()) {
-                    SpokenEnglishText(
-                        text = word.example,
-                        speech = speech,
-                        contextMeanings = WordPresentation.contextMeanings(word),
-                        contextPhonetics = WordPresentation.contextPhonetics(word),
-                        showHint = true
-                    )
-                }
-                if (showAnswer) {
-                    HorizontalDivider()
-                    Text(
-                        WordPresentation.meaningWithChineseType(word.meaning),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    if (word.exampleTranslation.isNotBlank()) Text(word.exampleTranslation)
-                    if (result == null) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedButton(
-                                onClick = {
-                                    saving = true
-                                    viewModel.answerWord(word, false, review = true, reloadSession = false) {
-                                        saving = false
-                                        if (it) result = false
-                                    }
-                                },
-                                enabled = !saving,
-                                modifier = Modifier.weight(1f)
-                            ) { Text("没想起来") }
-                            Button(
-                                onClick = {
-                                    saving = true
-                                    viewModel.answerWord(word, true, review = true, reloadSession = false) {
-                                        saving = false
-                                        if (it) result = true
-                                    }
-                                },
-                                enabled = !saving,
-                                modifier = Modifier.weight(1f)
-                            ) { Text("答对了") }
-                        }
-                    } else {
-                        Text(
-                            if (result == true) "回答正确，复习间隔已更新。" else "已加入明日复习。",
-                            color = if (result == true) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.error
-                        )
-                        PrimaryButton("下一个单词") { viewModel.advanceDueWord(word.id) }
-                    }
-                } else {
-                    PrimaryButton("显示答案") { showAnswer = true }
-                }
-            }
+            VocabularyRecallCard(
+                word = word, allWords = allWords, speech = speech,
+                answer = { correct, independent, saved ->
+                    viewModel.answerWord(word, correct, review = true, reloadSession = false,
+                        independentRecall = independent, onSaved = saved)
+                },
+                onNext = { viewModel.advanceDueWord(word.id) }
+            )
             Text(
                 "按最早到期顺序复习；两类内容充足时，四级词汇与新概念（第一、二册合计）各占一半。",
                 style = MaterialTheme.typography.bodySmall,
@@ -454,8 +364,11 @@ fun WrongWordsScreen(viewModel: CoachViewModel, onBack: () -> Unit) {
                         )
                         Text(word.exampleTranslation, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    OutlinedButton(onClick = { viewModel.answerWord(word, true, review = true) }) {
-                        Text("我已重新记住")
+                    OutlinedButton(onClick = {
+                        // This reference page already displays the translation.
+                        viewModel.answerWord(word, true, review = true, independentRecall = false)
+                    }) {
+                        Text("已看懂，明天再测")
                     }
                 }
             }

@@ -74,13 +74,13 @@ fun SettingsScreen(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Column(Modifier.weight(1f)) {
-                    Text("英音词典发音", style = MaterialTheme.typography.titleMedium)
+                    Text("在线英音 · 整句连续朗读", style = MaterialTheme.typography.titleMedium)
                     Text(
                         when {
-                            speech.status == SpeechStatus.LOADING -> "正在获取英音词典音频…"
-                            speech.status == SpeechStatus.PLAYING -> "正在播放词典英音"
+                            speech.status == SpeechStatus.LOADING -> "正在获取完整英音音频…"
+                            speech.status == SpeechStatus.PLAYING -> "正在连续朗读"
                             speech.status == SpeechStatus.ERROR ->
-                                speech.lastError ?: "英音词典暂时不可用"
+                                speech.lastError ?: "在线英音暂时不可用"
                             else -> speech.selectedVoiceLabel
                         },
                         style = MaterialTheme.typography.bodySmall,
@@ -99,7 +99,7 @@ fun SettingsScreen(
                     Icon(Icons.Default.RecordVoiceOver, contentDescription = null)
                 }
                 Spacer(Modifier.width(8.dp))
-                Text(if (speech.status == SpeechStatus.PLAYING) "正在播放" else "试听英音词典")
+                Text(if (speech.status == SpeechStatus.PLAYING) "正在播放" else "试听整句英音")
             }
             Text("语速：${"%.2f".format(speechRate)} 倍")
             Slider(
@@ -112,7 +112,8 @@ fun SettingsScreen(
             Text(
                 "不再使用手机系统朗读。首次播放需要联网，成功播放后会保存在 APP 缓存中，" +
                     "以后可离线重听；不调用 OpenAI、不需要 API Key，也不产生 Token 费用。" +
-                    "未缓存的发音会将所点单词或句子发送给有道词典（dict.youdao.com）；服务方也会收到网络 IP。" +
+                    "未缓存的单词会发送到有道词典（dict.youdao.com），句子/短语发送到百度翻译（fanyi.baidu.com，英音）。" +
+                    "只发送当前点击的英文，不上传整本课程、学习记录或密钥；服务方也会收到网络 IP。" +
                     "不要朗读包含密码、身份号码等敏感信息的文本。缓存可能被系统清理；个人课程原音频保存在应用文件中。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

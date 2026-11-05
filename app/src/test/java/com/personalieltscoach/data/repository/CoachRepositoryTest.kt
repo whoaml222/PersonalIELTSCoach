@@ -73,6 +73,27 @@ class CoachRepositoryTest {
         assertTrue(repository.newWords(continueAfterGoal = true).all { it.source == WordSource.NCE1 })
     }
 
+    @Test fun hintedRecognitionPreservesMistakeHistoryAndReturnsTomorrowForBothWordPacks() = runTest {
+        repository.initializeIfNeeded()
+        repository.savePlacement(PlacementResult("A0-A1", 300, "词汇", "基础路线"))
+        val tomorrow = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        listOf(WordSource.NCE1, WordSource.CET4).forEach { source ->
+            val word = database.wordDao().getNewBySource(source, 1).single().copy(wrongCount = 2)
+            database.wordDao().upsert(word)
+            repository.answerWord(word, correct = true, isReview = false, independentRecall = false)
+            // A repeat tap or switching practice mode must not upgrade this answer.
+            repository.answerWord(word, correct = true, isReview = false, independentRecall = true)
+            val saved = database.wordDao().getById(word.id)!!
+            assertEquals("LEARNING", saved.status)
+            assertEquals(0, saved.correctStreak)
+            assertEquals(2, saved.wrongCount)
+            assertEquals(tomorrow, saved.nextReviewAt)
+            assertTrue(repository.dueWords(now = tomorrow + 1000).any { it.id == word.id })
+        }
+        assertEquals(1, database.planDao().getTask(CoachRepository.today(), "VOCAB_NEW")!!.completedCount)
+        assertEquals(1, database.planDao().getTask(CoachRepository.today(), "SENTENCE_STUDY")!!.completedCount)
+    }
+
     @Test
     fun existingDailyPlanMigratesSentenceTaskToThirtyCet4Words() = runTest {
         repository.initializeIfNeeded()

@@ -70,7 +70,7 @@ class SpeechController internal constructor(
         private set
 
     val selectedVoiceLabel: String
-        get() = "在线英音词典 · 播放后自动离线缓存"
+        get() = "单词用有道英音，句子/短语用百度翻译英音；播放后缓存"
 
     val isReady: Boolean
         get() = status != SpeechStatus.LOADING
@@ -182,7 +182,7 @@ class SpeechController internal constructor(
             if (currentRequest == requestId && retryCount < 1) {
                 requestSpeech(originalText, retryCount + 1)
             } else if (currentRequest == requestId) {
-                showError("英音词典播放中断，请检查网络后重试")
+                    showError("整段英音播放中断，请重试；不会改成逐词拼读")
             }
             true
         }
@@ -223,7 +223,7 @@ class SpeechController internal constructor(
 
     private fun Throwable.userSpeechMessage(): String = when (this) {
         is IllegalArgumentException -> message ?: "没有可朗读的英文"
-        else -> "英音词典暂时不可用，请检查网络后重试"
+        else -> "整段英音暂时不可用，请检查网络后重试；不会改成逐词拼读"
     }
 
     private companion object {
@@ -258,7 +258,7 @@ fun SpeechButton(
     text: String,
     speech: SpeechController,
     modifier: Modifier = Modifier,
-    contentDescription: String = "使用英音词典朗读"
+    contentDescription: String = "使用在线英音朗读"
 ) {
     val active = speech.currentText == text.trim() &&
         speech.status in setOf(SpeechStatus.LOADING, SpeechStatus.PLAYING)
@@ -287,7 +287,8 @@ fun SpokenEnglishText(
     contextMeanings: Map<String, String> = emptyMap(),
     contextPhonetics: Map<String, String> = emptyMap(),
     grammar: List<com.personalieltscoach.domain.service.GrammarToken> = emptyList(),
-    onCollect: ((com.personalieltscoach.domain.service.WordContext) -> Unit)? = null
+    onCollect: ((com.personalieltscoach.domain.service.WordContext) -> Unit)? = null,
+    onWordLookup: (() -> Unit)? = null
 ) {
     if (text.isBlank()) return
     var selectedOffset by remember(text) { mutableStateOf<Int?>(null) }
@@ -307,7 +308,7 @@ fun SpokenEnglishText(
         ) {
             ClickableEnglishText(
                 text = text,
-                onWordClick = { selectedOffset = it },
+                onWordClick = { onWordLookup?.invoke(); selectedOffset = it },
                 modifier = Modifier.weight(1f),
                 style = style,
                 wordColor = wordColor

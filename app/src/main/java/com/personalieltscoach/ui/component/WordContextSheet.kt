@@ -93,7 +93,7 @@ fun WordContextSheet(sentence: String, offset: Int, speech: SpeechController,
                 if (onCollect != null && !entry.meaning.startsWith("本地词库暂无")) {
                     OutlinedButton(onClick = { onCollect(entry) }) { Text("收藏到阅读生词") }
                 }
-                Text("释义与规则在本机查询；只有点击发音才会请求在线词典，已缓存的音频无需联网。",
+                Text("释义与规则在本机查询；点播放只发送当前英文：单词到有道，句子/短语到百度翻译英音。缓存后无需联网。",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } ?: CircularProgressIndicator(Modifier.size(24.dp))
         }

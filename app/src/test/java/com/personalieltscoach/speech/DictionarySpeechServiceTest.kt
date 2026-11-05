@@ -47,34 +47,71 @@ class DictionarySpeechServiceTest {
     @Test
     fun `downloaded dictionary clips are reused from cache`() = runTest {
         server.enqueue(audioResponse())
-        server.enqueue(audioResponse())
         val service = service()
 
         val first = service.prepare("I wake up today.")
         val second = service.prepare("I wake up today.")
 
-        assertEquals(2, first.size)
+        assertEquals(1, first.size)
         assertEquals(first, second)
-        assertEquals(2, server.requestCount)
+        assertEquals(1, server.requestCount)
         assertTrue(first.all { it.length() >= 512 })
-        assertTrue(server.takeRequest().requestUrl?.queryParameter("type") == "1")
+        val request = server.takeRequest()
+        assertEquals("uk", request.requestUrl?.queryParameter("lan"))
+        assertEquals("I wake up today.", request.requestUrl?.queryParameter("text"))
+        assertEquals("/gettts", request.requestUrl?.encodedPath)
     }
 
     @Test
-    fun `unsupported phrase automatically falls back to smaller clips`() = runTest {
+    fun `unsupported whole phrase fails explicitly without word sized fallback`() = runTest {
         server.enqueue(MockResponse().setResponseCode(500).setBody("{}"))
         server.enqueue(MockResponse().setResponseCode(500).setBody("{}"))
-        server.enqueue(audioResponse())
-        server.enqueue(audioResponse())
+        val error = runCatching { service().prepare("check the pressure") }.exceptionOrNull()
 
-        val files = service().prepare("check the pressure")
+        assertTrue(error is DictionarySpeechException)
+        assertEquals(2, server.requestCount)
+        assertEquals("check the pressure", server.takeRequest().requestUrl?.queryParameter("text"))
+        assertEquals("check the pressure", server.takeRequest().requestUrl?.queryParameter("text"))
+    }
 
-        assertEquals(2, files.size)
-        assertEquals(4, server.requestCount)
-        assertEquals("check the pressure", server.takeRequest().requestUrl?.queryParameter("audio"))
-        assertEquals("check the pressure", server.takeRequest().requestUrl?.queryParameter("audio"))
-        assertEquals("check", server.takeRequest().requestUrl?.queryParameter("audio"))
-        assertEquals("the pressure", server.takeRequest().requestUrl?.queryParameter("audio"))
+    @Test fun `full sentence including the last word is requested once`() = runTest {
+        server.enqueue(audioResponse())
+        val text = "Could you check the air-conditioning before we leave, please?"
+        val files = service().prepare(text)
+        assertEquals(1, files.size)
+        assertEquals(1, server.requestCount)
+        assertEquals(text, server.takeRequest().requestUrl?.queryParameter("text"))
+    }
+
+    @Test fun `retry requests the whole utterance not separate words`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(503))
+        server.enqueue(audioResponse())
+        assertEquals(1, service().prepare("I'm ready, let's go.").size)
+        repeat(2) { assertEquals("I'm ready, let's go.", server.takeRequest().requestUrl?.queryParameter("text")) }
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test fun `whole utterance cache cannot reuse legacy or different punctuation`() {
+        val service = service()
+        val oldKey = java.security.MessageDigest.getInstance("SHA-256")
+            .digest("uk-dictionary-v1|i'm ready".toByteArray()).joinToString("") { "%02x".format(it) }
+        assertTrue(oldKey != service.cacheKey("I'm ready"))
+        assertTrue(service.cacheKey("Let's eat, Jack.") != service.cacheKey("Let's eat Jack."))
+    }
+
+    @Test fun `single word keeps UK dictionary and existing offline cache`() = runTest {
+        server.enqueue(audioResponse())
+        val service = service()
+        val first = service.prepare("pressure")
+        val request = server.takeRequest()
+        assertEquals("/dictvoice", request.requestUrl?.encodedPath)
+        assertEquals("pressure", request.requestUrl?.queryParameter("audio"))
+        assertEquals("1", request.requestUrl?.queryParameter("type"))
+        assertEquals(first, service.prepare("pressure"))
+        assertEquals(1, server.requestCount)
+        val oldKey = java.security.MessageDigest.getInstance("SHA-256")
+            .digest("uk-dictionary-v1|pressure".toByteArray()).joinToString("") { "%02x".format(it) }
+        assertEquals(oldKey, service.cacheKey("pressure"))
     }
 
     @Test fun `cancelling stops a pending network request without fallback downloads`() = runTest {
@@ -91,6 +128,7 @@ class DictionarySpeechServiceTest {
         return DictionarySpeechService(
             context = context,
             endpoint = server.url("/dictvoice"),
+            phraseEndpoint = server.url("/gettts"),
             cacheDirectory = cacheDirectory
         )
     }

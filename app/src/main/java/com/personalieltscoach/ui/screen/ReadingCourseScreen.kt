@@ -147,7 +147,7 @@ private fun LessonReader(reader: ReaderViewModel, course: CourseEntity, lesson: 
         message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         if (audioFile != null) SectionCard("听课文") {
             LocalReadingAudio(audioFile, saved?.audioPosition ?: 0) { reader.position(course.id, lesson.id, audio = it) }
-        } else Text("本篇没有原录音。点句子右侧可使用在线英音词典；点词查询不联网。", style = MaterialTheme.typography.bodySmall)
+        } else Text("本篇没有原录音。点右侧用百度翻译英音整句朗读，只发送当前英文、播放后缓存；点词查询不联网。", style = MaterialTheme.typography.bodySmall)
         if (lesson.note.isNotBlank()) Text(lesson.note, style = MaterialTheme.typography.bodySmall)
         if (!lesson.ready || lesson.sentences.isEmpty()) {
             SectionCard("正文待补充") { Text("源资料缺少可核对正文，暂不计入已完成。可以先听现有原录音、查看词表。") }

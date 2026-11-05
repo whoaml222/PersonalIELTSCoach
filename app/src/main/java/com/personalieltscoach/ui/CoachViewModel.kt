@@ -31,7 +31,6 @@ data class Cet4SessionState(
     val words: List<WordItemEntity> = emptyList(),
     val initialCount: Int = 0,
     val continuing: Boolean = false,
-    val answering: Boolean = false,
     val completed: Boolean = false,
     val error: String? = null
 )
@@ -186,16 +185,19 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         correct: Boolean,
         review: Boolean,
         reloadSession: Boolean = true,
+        independentRecall: Boolean = true,
         onSaved: (Boolean) -> Unit = {}
     ) {
         viewModelScope.launch {
-            runCatching { coach.answerWord(word, correct, review) }
+            runCatching { coach.answerWord(word, correct, review, independentRecall) }
                 .onSuccess {
                     onSaved(true)
                     if (reloadSession) {
                         if (review) loadDueWords() else loadNewWords()
                     }
-                    _message.value = if (correct) {
+                    _message.value = if (correct && !independentRecall) {
+                        "提示后认对了，明天再独立回忆"
+                    } else if (correct) {
                         "答对了，已安排下次复习"
                     } else {
                         "已加入错词本，明天再复习"
@@ -257,31 +259,11 @@ class CoachViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun answerCurrentCet4Word(correct: Boolean) {
-        val generation = cet4SessionGeneration
+    fun advanceCet4Word(wordId: Long) {
         val state = _cet4Session.value
-        val word = state.words.firstOrNull() ?: return
-        if (state.answering) return
-        _cet4Session.value = state.copy(answering = true, error = null)
-        viewModelScope.launch {
-            runCatching { coach.answerWord(word, correct, isReview = false) }
-                .onSuccess {
-                    if (generation != cet4SessionGeneration) return@onSuccess
-                    val remaining = _cet4Session.value.words.drop(1)
-                    _cet4Session.value = _cet4Session.value.copy(
-                        words = remaining,
-                        answering = false,
-                        completed = remaining.isEmpty()
-                    )
-                }
-                .onFailure { error ->
-                    if (generation != cet4SessionGeneration) return@onFailure
-                    _cet4Session.value = _cet4Session.value.copy(
-                        answering = false,
-                        error = error.userMessage()
-                    )
-                }
-        }
+        if (state.words.firstOrNull()?.id != wordId) return
+        val remaining = state.words.drop(1)
+        _cet4Session.value = state.copy(words = remaining, completed = remaining.isEmpty())
     }
 
     fun closeCet4Session() {

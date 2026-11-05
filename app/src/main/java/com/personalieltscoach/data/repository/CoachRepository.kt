@@ -251,13 +251,15 @@ class CoachRepository(
         return if (limit == 0) emptyList() else database.wordDao().getNewBySource(WordSource.CET4, limit)
     }
 
-    suspend fun answerWord(word: WordItemEntity, correct: Boolean, isReview: Boolean) {
+    suspend fun answerWord(
+        word: WordItemEntity, correct: Boolean, isReview: Boolean, independentRecall: Boolean = true
+    ) {
         ensureTodayPlan()
         val now = System.currentTimeMillis()
         database.withTransaction {
             val fresh = database.wordDao().getById(word.id) ?: return@withTransaction
             if (fresh.status != "NEW" && fresh.updatedAt >= dayStart(now)) return@withTransaction
-            val update = ReviewScheduler.next(correct, fresh.correctStreak, fresh.wrongCount, now)
+            val update = ReviewScheduler.next(correct, fresh.correctStreak, fresh.wrongCount, now, independentRecall)
             database.wordDao().upsert(
                 fresh.copy(
                     status = update.status,

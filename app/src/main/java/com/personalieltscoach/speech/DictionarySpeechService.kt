@@ -32,34 +32,24 @@ class DictionarySpeechService(
         .retryOnConnectionFailure(true)
         .build(),
     private val endpoint: HttpUrl = ENDPOINT.toHttpUrl(),
+    private val phraseEndpoint: HttpUrl = PHRASE_ENDPOINT.toHttpUrl(),
     private val cacheDirectory: File = File(context.cacheDir, CACHE_DIRECTORY)
 ) {
     private val downloadMutex = Mutex()
 
     suspend fun prepare(text: String): List<File> = withContext(Dispatchers.IO) {
-        val segments = DictionarySpeechSegmenter.split(text)
-        require(segments.isNotEmpty()) { "没有可朗读的英文" }
+        val utterance = DictionarySpeechSegmenter.normalize(text)
         cacheDirectory.mkdirs()
         trimCache()
-        segments.flatMap { prepareWithFallback(it) }
+        // A sentence/phrase must be one recording. Word-sized fallbacks destroy
+        // connected speech and must never masquerade as a sentence recording.
+        listOf(prepareSegment(utterance))
     }
 
     fun invalidate(files: Collection<File>) {
         files.forEach { file ->
             if (file.parentFile == cacheDirectory) runCatching { file.delete() }
         }
-    }
-
-    private suspend fun prepareWithFallback(segment: String): List<File> {
-        return runCatching { listOf(prepareSegment(segment)) }
-            .getOrElse { originalError ->
-                if (originalError is CancellationException) throw originalError
-                // Splitting cannot repair an offline network or a timed-out socket.
-                if (originalError !is DictionarySpeechException) throw originalError
-                val halves = DictionarySpeechSegmenter.halve(segment)
-                if (halves == null) throw originalError
-                prepareWithFallback(halves.first) + prepareWithFallback(halves.second)
-            }
     }
 
     private suspend fun prepareSegment(segment: String): File {
@@ -75,21 +65,26 @@ class DictionarySpeechService(
                 currentCoroutineContext().ensureActive()
                 runCatching { download(segment, target) }
                     .onSuccess { return@withLock it }
-                    .onFailure { error -> lastError = error }
+                    .onFailure { error ->
+                        if (error is CancellationException) throw error
+                        lastError = error
+                    }
             }
             throw lastError ?: DictionarySpeechException("英音词典暂时不可用")
         }
     }
 
     private suspend fun download(segment: String, target: File): File {
-        val url = endpoint.newBuilder()
-            .addQueryParameter("audio", segment)
-            .addQueryParameter("type", "1")
-            .build()
+        val word = DictionarySpeechSegmenter.isSingleWord(segment)
+        val url = if (word) endpoint.newBuilder()
+            .addQueryParameter("audio", segment).addQueryParameter("type", "1").build()
+        else phraseEndpoint.newBuilder()
+            .addQueryParameter("text", segment).addQueryParameter("lan", "uk")
+            .addQueryParameter("spd", "3").addQueryParameter("source", "web").build()
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
-            .header("Referer", "https://dict.youdao.com/")
+            .header("Referer", if (word) "https://dict.youdao.com/" else "https://fanyi.baidu.com/")
             .get()
             .build()
         val temporary = File.createTempFile("dictionary-", ".tmp", cacheDirectory)
@@ -123,7 +118,7 @@ class DictionarySpeechService(
                     val bytes = response.use {
                         val body = it.body
                         if (!it.isSuccessful || body == null || body.contentType()?.type != "audio")
-                            throw DictionarySpeechException("词典中没有找到这段英音")
+                            throw DictionarySpeechException("在线服务没有返回可用英音")
                         require(body.contentLength() <= 4L * 1024 * 1024) { "词典音频异常过大" }
                         body.byteStream().use { input ->
                             ByteArrayOutputStream().use { output ->
@@ -150,7 +145,10 @@ class DictionarySpeechService(
     private fun cacheFile(segment: String): File = File(cacheDirectory, "${cacheKey(segment)}.mp3")
 
     internal fun cacheKey(segment: String): String = MessageDigest.getInstance("SHA-256")
-        .digest("uk-dictionary-v1|${segment.lowercase().trim()}".toByteArray())
+        // Keep existing single-word audio offline, but never reuse old chunks as
+        // a connected utterance from the new phrase provider.
+        .digest((if (DictionarySpeechSegmenter.isSingleWord(segment)) "uk-dictionary-v1|${segment.lowercase().trim()}"
+            else "uk-baidu-utterance-v2|$segment").toByteArray(Charsets.UTF_8))
         .joinToString("") { "%02x".format(it) }
 
     private fun trimCache() {
@@ -168,8 +166,9 @@ class DictionarySpeechService(
 
     private companion object {
         const val ENDPOINT = "https://dict.youdao.com/dictvoice"
+        const val PHRASE_ENDPOINT = "https://fanyi.baidu.com/gettts"
         const val CACHE_DIRECTORY = "uk_dictionary_speech"
-        const val USER_AGENT = "PersonalIELTSCoach/1.6.3"
+        const val USER_AGENT = "PersonalIELTSCoach"
         const val MIN_AUDIO_BYTES = 512L
         const val MAX_CACHE_BYTES = 64L * 1024L * 1024L
         const val TARGET_CACHE_BYTES = 48L * 1024L * 1024L
@@ -177,20 +176,18 @@ class DictionarySpeechService(
 }
 
 object DictionarySpeechSegmenter {
-    private val TOKEN = Regex("[A-Za-zÀ-ÖØ-öø-ÿ0-9]+(?:['’][A-Za-zÀ-ÖØ-öø-ÿ]+)*")
+    private val TOKEN = Regex("[A-Za-zÀ-ÖØ-öø-ÿ0-9]+(?:['’-][A-Za-zÀ-ÖØ-öø-ÿ]+)*")
 
-    fun split(text: String): List<String> = TOKEN.findAll(text)
-        .map { it.value.replace('’', '\'') }
-        .toList()
-        .chunked(3)
-        .map { it.joinToString(" ") }
+    fun isSingleWord(text: String): Boolean = TOKEN.matches(text)
 
-    fun halve(segment: String): Pair<String, String>? {
-        val words = segment.split(' ').filter(String::isNotBlank)
-        if (words.size < 2) return null
-        val middle = words.size / 2
-        return words.take(middle).joinToString(" ") to words.drop(middle).joinToString(" ")
+    fun normalize(text: String): String {
+        val utterance = text.replace('’', '\'').replace(Regex("\\s+"), " ").trim()
+        require(utterance.length <= 500) { "这段文字过长，请选择不超过 500 字符的句子朗读" }
+        require(TOKEN.containsMatchIn(utterance)) { "没有可朗读的英文" }
+        return utterance
     }
+
+    fun split(text: String): List<String> = listOf(normalize(text))
 }
 
 class DictionarySpeechException(message: String) : Exception(message)
